@@ -826,17 +826,6 @@ openfont(
 		{ NULL, "", 0 } /* end of table */
 	};
 
-	if (stat(fname, &statbuf) == -1) {
-		fprintf(stderr, "**** Cannot access %s ****\n", fname);
-		exit(1);
-	}
-	if ((filebuffer = malloc(statbuf.st_size)) == NULL) {
-		fprintf(stderr, "**** Cannot malloc space for file ****\n");
-		exit(1);
-	}
-
-	filebuffer_end = filebuffer + statbuf.st_size;
-
 	if ((ttf_file = fopen(fname, "rb")) == NULL) {
 		fprintf(stderr, "**** Cannot open file '%s'\n", fname);
 		exit(1);
@@ -844,8 +833,23 @@ openfont(
 		WARNING_2 fprintf(stderr, "Processing file %s\n", fname);
 	}
 
+	if (fstat(fileno(ttf_file), &statbuf) == -1) {
+		fprintf(stderr, "**** Cannot access %s ****\n", fname);
+		fclose(ttf_file);
+		exit(1);
+	}
+
+	if ((filebuffer = malloc(statbuf.st_size)) == NULL) {
+		fprintf(stderr, "**** Cannot malloc space for file ****\n");
+		fclose(ttf_file);
+		exit(1);
+	}
+
+	filebuffer_end = filebuffer + statbuf.st_size;
+
 	if (fread(filebuffer, 1, statbuf.st_size, ttf_file) != statbuf.st_size) {
 		fprintf(stderr, "**** Could not read whole file \n");
+		fclose(ttf_file);
 		exit(1);
 	}
 	fclose(ttf_file);
