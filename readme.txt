@@ -10,8 +10,6 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Erlebe die neue Generation des PS Multisite Indexers – die zentrale Plattform für Content-Indexierung, Netzwerk-Statistiken und Monitoring in WordPress Multisites. 
 
-Experience the next generation of PS Multisite Indexer – your central platform for content indexing, network statistics, and monitoring in WordPress Multisites.
-
 == Description ==
 
 Der PS Multisite Indexer vereint jetzt alle wichtigen Funktionen in einem einzigen, leistungsstarken Plugin. Früher waren viele zusätzliche Plugins nötig – heute sind alle Erweiterungen (Extensions) direkt integriert. Behalte jederzeit den Überblick über alle Inhalte, Post-Typen und Aktivitäten in Deinem Netzwerk. 
