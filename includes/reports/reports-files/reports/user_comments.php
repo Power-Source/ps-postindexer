@@ -33,7 +33,7 @@ function report_user_comments_ouput() {
 					<tr valign="top">
 						<th scope="row"><?php _e( 'Username', 'reports' ) ?></th>
 						<td>
-							<input type="text" name="user_login" id="user_login" style="width: 95%" tabindex='1' maxlength="200" value="" />
+							<input type="text" name="user_login" id="user_login" class="user-autocomplete" style="width: 95%" tabindex='1' maxlength="200" value="" autocomplete="off" />
 							<br />
 							<?php _e( 'Case Sensitive', 'reports' ) ?>
 						</td>
@@ -53,6 +53,21 @@ function report_user_comments_ouput() {
 					<input type="submit" name="Submit" class="button-primary" value="<?php _e( 'View', 'reports' ) ?>" />
 				</p>
 			</form>
+			<script>
+			jQuery(document).ready(function($){
+				$('#user_login').autocomplete({
+					source: function(request, response) {
+						$.post(ajaxurl, {
+							action: 'reports_search_users',
+							term: request.term
+						}, function(data) {
+							response(data);
+						}, 'json');
+					},
+					minLength: 2
+				});
+			});
+			</script>
 			<?php
 		break;
 		//---------------------------------------------------//

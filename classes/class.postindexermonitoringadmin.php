@@ -51,22 +51,66 @@ class Postindexer_Monitoring_Admin {
             ],
             // Weitere Tools können hier ergänzt werden
         ];
+
+        // Toggle-Handler früh ausführen, bevor Output startet
+        add_action('admin_init', [$this, 'handle_toggle']);
+
+        // AJAX Toggle
+        add_action('wp_ajax_ps_monitoring_toggle', [$this, 'ajax_toggle']);
+    }
+
+    private function get_tool_by_key($key) {
+        foreach ($this->tools as $tool) {
+            if ($tool['key'] === $key) return $tool;
+        }
+        return null;
+    }
+
+    public function handle_toggle() {
+        if (empty($_POST['ps_monitoring_toggle'])) return;
+        if (!current_user_can('manage_network_options')) return;
+        // Nur auf Monitoring-Seite reagieren
+        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        if ($page !== 'ps-multisite-index-monitoring') return;
+
+        check_admin_referer('ps_monitoring_toggle');
+        $toggle_key = isset($_POST['tool_key']) ? sanitize_key($_POST['tool_key']) : '';
+        if (isset($_POST['tool_state'])) {
+            $toggle_state = $_POST['tool_state'] === 'on';
+        } else {
+            $toggle_state = isset($_POST['tool_state_checkbox']) && $_POST['tool_state_checkbox'] === 'on';
+        }
+        if ($toggle_key) {
+            $this->set_tool_enabled($toggle_key, $toggle_state);
+            // Redirect before any output
+            wp_safe_redirect(add_query_arg(['page' => 'ps-multisite-index-monitoring', 'tab' => $toggle_key], network_admin_url('admin.php')));
+            exit;
+        }
+    }
+
+    public function ajax_toggle() {
+        if (!current_user_can('manage_network_options')) wp_send_json_error(['message' => 'forbidden'], 403);
+        check_ajax_referer('ps_monitoring_toggle', 'nonce');
+
+        $toggle_key = isset($_POST['tool_key']) ? sanitize_key($_POST['tool_key']) : '';
+        $toggle_state = isset($_POST['tool_state']) && $_POST['tool_state'] === 'on';
+        $tool = $this->get_tool_by_key($toggle_key);
+        if (!$tool) {
+            wp_send_json_error(['message' => 'tool_not_found'], 404);
+        }
+
+        $this->set_tool_enabled($toggle_key, $toggle_state);
+        $status = $this->get_tool_status($tool);
+
+        wp_send_json_success([
+            'enabled' => $status['enabled'],
+            'status_class' => $status['status_class'],
+            'badge' => $status['badge'],
+            'label' => $status['enabled'] ? __('Aktiv', 'postindexer') : __('Inaktiv', 'postindexer')
+        ]);
     }
 
     public function render_monitoring_page() {
-        // Toggle-Handler
-        if (isset($_POST['ps_monitoring_toggle'])) {
-            check_admin_referer('ps_monitoring_toggle');
-            $toggle_key = isset($_POST['tool_key']) ? sanitize_key($_POST['tool_key']) : '';
-            $toggle_state = isset($_POST['tool_state']) && $_POST['tool_state'] === 'on';
-            if ($toggle_key) {
-                $this->set_tool_enabled($toggle_key, $toggle_state);
-                // Reload to reflect state
-                wp_safe_redirect(add_query_arg(['page' => 'ps-multisite-index-monitoring', 'tab' => $toggle_key], network_admin_url('admin.php')));
-                exit;
-            }
-        }
-
         // Aktiven Tab ermitteln
         $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'blog_activity';
         
@@ -119,7 +163,7 @@ class Postindexer_Monitoring_Admin {
             $status_class = $tool_status[$tool['key']]['status_class'];
             $url = add_query_arg(['page' => 'ps-multisite-index-monitoring', 'tab' => $tool['key']], network_admin_url('admin.php'));
             
-            echo '<a href="' . esc_url($url) . '" class="tab-link ' . $is_active . ' ' . $status_class . '">';
+            echo '<a href="' . esc_url($url) . '" class="tab-link ' . $is_active . ' ' . $status_class . '" data-tool-key="' . esc_attr($tool['key']) . '">';
             echo '<span class="tab-status"></span>';
             echo '<span class="tab-name">' . esc_html($tool['name']) . '</span>';
             if (!empty($tool_status[$tool['key']]['badge'])) {
@@ -139,16 +183,37 @@ class Postindexer_Monitoring_Admin {
             echo '<div class="tab-header">';
             echo '<h2>' . esc_html($tool['name']) . '</h2>';
             echo '<p class="tab-description">' . esc_html($tool['desc']) . '</p>';
+            
+            // Alerts-Box anzeigen wenn vorhanden
+            if (!empty($tool_status[$tool['key']]['alerts'])) {
+                echo '<div class="tool-alerts">';
+                echo '<h3><span class="dashicons dashicons-yes-alt"></span> ' . sprintf(__('%d verfügbare Reports', 'postindexer'), count($tool_status[$tool['key']]['alerts'])) . '</h3>';
+                echo '<ul class="alerts-list">';
+                foreach ($tool_status[$tool['key']]['alerts'] as $alert) {
+                    echo '<li>';
+                    echo '<a href="#" data-psource-modal-open="report-modal" data-report="' . esc_attr($alert['nicename']) . '">';
+                    echo '<strong>' . esc_html($alert['title']) . '</strong>';
+                    echo '<span class="alert-desc">' . esc_html($alert['desc']) . '</span>';
+                    echo '</a>';
+                    echo '</li>';
+                }
+                echo '</ul>';
+                echo '</div>';
+            }
+            
             echo '<div class="tab-toolbar">';
-            echo '<form method="post" class="tab-toggle-form">';
+            echo '<form method="post" class="tab-toggle-form" data-tool="' . esc_attr($tool['key']) . '">';
             wp_nonce_field('ps_monitoring_toggle');
             echo '<input type="hidden" name="ps_monitoring_toggle" value="1" />';
             echo '<input type="hidden" name="tool_key" value="' . esc_attr($tool['key']) . '" />';
             $enabled = $tool_status[$tool['key']]['enabled'];
-            echo '<input type="hidden" name="tool_state" value="' . ($enabled ? 'off' : 'on') . '" />';
+            echo '<input type="hidden" name="tool_state" value="' . ($enabled ? 'on' : 'off') . '" />';
+            echo '<label class="toggle-switch">';
+            echo '<input type="checkbox" name="tool_state_checkbox" class="tool-toggle" data-key="' . esc_attr($tool['key']) . '" ' . checked($enabled, true, false) . ' />';
+            echo '<span class="slider"></span>';
+            echo '</label>';
             $btn_label = $enabled ? __('Deaktivieren', 'postindexer') : __('Aktivieren', 'postindexer');
-            $btn_class = $enabled ? 'button-secondary' : 'button button-primary';
-            echo '<button type="submit" class="' . esc_attr($btn_class) . '">' . esc_html($btn_label) . '</button>';
+            echo '<button type="submit" class="screen-reader-text">' . esc_html($btn_label) . '</button>';
             echo '<span class="tool-state-label ' . esc_attr($tool_status[$tool['key']]['status_class']) . '">';
             echo $enabled ? __('Aktiv', 'postindexer') : __('Inaktiv', 'postindexer');
             if (!empty($tool_status[$tool['key']]['badge'])) {
@@ -173,23 +238,30 @@ class Postindexer_Monitoring_Admin {
         
         // Modal für Reports
         $this->render_modal();
+
+        // Interaktion
+        $this->render_scripts();
         
         echo '</div>'; // .wrap
     }
     
     private function get_tool_status($tool) {
+        $enabled = $this->is_tool_enabled($tool['key']);
         $status = [
             'active' => false,
+            'enabled' => $enabled,
             'badge' => '',
-            'stat' => null
+            'stat' => null,
+            'status_class' => 'status-off',
+            'alerts' => []
         ];
         
         // Prüfe ob Tool verfügbar ist
-        if (file_exists($tool['file']) && class_exists($tool['class'], false)) {
+        if ($enabled && file_exists($tool['file'])) {
             $status['active'] = true;
         }
         
-        // Tool-spezifische Statistiken
+        // Tool-spezifische Statistiken & Badges
         switch ($tool['key']) {
             case 'blog_activity':
                 $status['stat'] = [
@@ -207,12 +279,78 @@ class Postindexer_Monitoring_Admin {
                 ];
                 break;
             case 'reports':
-                // Anzahl verfügbarer Reports
-                $status['badge'] = '5';
+                if (class_exists('Activity_Reports')) {
+                    $reports_instance = Activity_Reports::instance();
+                    if (!empty($reports_instance->available_reports)) {
+                        $count = count($reports_instance->available_reports);
+                        $status['badge'] = (string) $count;
+                        $status['alerts'] = [];
+                        foreach ($reports_instance->available_reports as $report) {
+                            $status['alerts'][] = [
+                                'title' => $report[0],
+                                'nicename' => $report[1],
+                                'desc' => $report[2]
+                            ];
+                        }
+                        // Reports verfügbar = grün statt gelb
+                        $status['status_class'] = 'status-active';
+                    }
+                }
+                break;
+            case 'content_monitor':
+                $log = get_site_option( 'content_monitor_log', array() );
+                if ( is_array( $log ) && !empty( $log ) ) {
+                    $status['badge'] = (string) count( $log );
+                }
+                break;
+            case 'user_reports':
+                // keine spezielle Statistik, nur Status
                 break;
         }
         
+        // Statusfarbe bestimmen (aber nur wenn nicht bereits gesetzt)
+        if (empty($status['status_class']) || $status['status_class'] === 'status-off') {
+            if (!$enabled) {
+                $status['status_class'] = 'status-off';
+            } elseif (!empty($status['badge'])) {
+                $status['status_class'] = 'status-alert';
+            } elseif ($status['active']) {
+                $status['status_class'] = 'status-active';
+            } else {
+                $status['status_class'] = 'status-off';
+            }
+        }
+        
         return $status;
+    }
+
+    private function get_enabled_tools() {
+        $option = get_site_option('ps_monitoring_enabled_tools', null);
+        if ($option === null) {
+            // Default: alles aktiv außer User Reports (bisher als inaktiv wahrgenommen)
+            $defaults = array_map(function($t){ return $t['key']; }, $this->tools);
+            $defaults = array_filter($defaults, function($k){ return $k !== 'user_reports'; });
+            update_site_option('ps_monitoring_enabled_tools', $defaults);
+            return $defaults;
+        }
+        return is_array($option) ? $option : [];
+    }
+
+    private function is_tool_enabled($key) {
+        $enabled = $this->get_enabled_tools();
+        return in_array($key, $enabled, true);
+    }
+
+    private function set_tool_enabled($key, $state) {
+        $enabled = $this->get_enabled_tools();
+        if ($state) {
+            if (!in_array($key, $enabled, true)) {
+                $enabled[] = $key;
+            }
+        } else {
+            $enabled = array_values(array_diff($enabled, [$key]));
+        }
+        update_site_option('ps_monitoring_enabled_tools', $enabled);
     }
     
     private function render_tool_content($tool) {
@@ -266,6 +404,70 @@ class Postindexer_Monitoring_Admin {
         } else {
             echo '<div class="notice notice-warning"><p>Ausgabemethode nicht gefunden.</p></div>';
         }
+    }
+
+    private function render_scripts() {
+        $badge_label = __('Meldungen: %s', 'postindexer');
+        $error_label = __('Konnte den Status nicht speichern.', 'postindexer');
+        $nonce = wp_create_nonce('ps_monitoring_toggle');
+        echo '<script>
+        (function($){
+            var config = {
+                nonce: ' . json_encode($nonce) . ',
+                badgeLabel: ' . json_encode($badge_label) . ',
+                errorText: ' . json_encode($error_label) . '
+            };
+
+            $(document).on("change", ".tab-toggle-form .tool-toggle", function(){
+                var $checkbox = $(this);
+                var key = $checkbox.data("key");
+                var on = $checkbox.is(":checked");
+                var prev = !on;
+                var $form = $checkbox.closest("form");
+                $checkbox.prop("disabled", true);
+                $form.find("input[name=tool_state]").val(on ? "on" : "off");
+
+                $.post(ajaxurl, {
+                    action: "ps_monitoring_toggle",
+                    nonce: config.nonce,
+                    tool_key: key,
+                    tool_state: on ? "on" : "off"
+                }).done(function(resp){
+                    if (!resp || !resp.success) {
+                        throw new Error("request failed");
+                    }
+                    var data = resp.data || {};
+                    var $label = $form.find(".tool-state-label");
+                    $label.removeClass("status-active status-off status-alert").addClass(data.status_class || "");
+                    var labelText = data.label || (on ? "Aktiv" : "Inaktiv");
+                    if (data.badge) {
+                        labelText += " · " + config.badgeLabel.replace("%s", data.badge);
+                    }
+                    $label.text(labelText);
+                    $form.find("input[name=tool_state]").val(data.enabled ? "on" : "off");
+                    $checkbox.prop("checked", !!data.enabled);
+
+                    var $tabLink = $(".ps-monitoring-tabs .tab-link[data-tool-key=\"" + key + "\"]");
+                    $tabLink.removeClass("status-active status-off status-alert").addClass(data.status_class || "");
+                    var $badge = $tabLink.find(".tab-badge");
+                    if (data.badge) {
+                        if (!$badge.length) {
+                            $badge = $(\'<span class="tab-badge" />\').appendTo($tabLink);
+                        }
+                        $badge.text(data.badge);
+                    } else {
+                        $badge.remove();
+                    }
+                }).fail(function(){
+                    $checkbox.prop("checked", prev);
+                    $form.find("input[name=tool_state]").val(prev ? "on" : "off");
+                    window.alert(config.errorText);
+                }).always(function(){
+                    $checkbox.prop("disabled", false);
+                });
+            });
+        })(jQuery);
+        </script>';
     }
     
     private function render_styles() {
@@ -359,6 +561,14 @@ class Postindexer_Monitoring_Admin {
             background: #2ecc40;
             box-shadow: 0 0 8px rgba(46,204,64,0.6);
         }
+        .tab-link.status-off .tab-status {
+            background: #ff4d4f;
+            box-shadow: 0 0 8px rgba(255,77,79,0.4);
+        }
+        .tab-link.status-alert .tab-status {
+            background: #f1c40f;
+            box-shadow: 0 0 10px rgba(241,196,15,0.6);
+        }
         .tab-badge {
             background: rgba(255,255,255,0.3);
             padding: 0.2em 0.6em;
@@ -397,8 +607,131 @@ class Postindexer_Monitoring_Admin {
             color: #666;
             font-size: 1.05em;
         }
+        .tool-alerts {
+            background: linear-gradient(135deg, #d4edda 0%, #e8f5e9 100%);
+            border-left: 4px solid #28a745;
+            padding: 1.5em;
+            margin: 1em 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(40,167,69,0.15);
+        }
+        .tool-alerts h3 {
+            margin: 0 0 1em 0;
+            color: #155724;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .tool-alerts h3 .dashicons {
+            color: #28a745;
+        }
+        .alerts-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0.75em;
+        }
+        .alerts-list li {
+            background: #fff;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .alerts-list li:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .alerts-list a {
+            display: block;
+            padding: 1em;
+            text-decoration: none;
+            color: inherit;
+        }
+        .alerts-list strong {
+            display: block;
+            color: #0073aa;
+            font-size: 1.05em;
+            margin-bottom: 0.3em;
+        }
+        .alerts-list .alert-desc {
+            display: block;
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
         .tab-body {
             /* Bestehende Tool-Styles bleiben erhalten */
+        }
+        .tab-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin-top: 0.5em;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 54px;
+            height: 28px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #d9d9d9;
+            transition: .3s;
+            border-radius: 28px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .toggle-switch input:checked + .slider {
+            background: linear-gradient(135deg, #4caf50 0%, #2e8b57 100%);
+        }
+        .toggle-switch input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .toggle-switch input:disabled + .slider {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .tab-toolbar .tool-state-label {
+            font-weight: 600;
+            padding: 0.2em 0.6em;
+            border-radius: 8px;
+            background: #f5f5f5;
+        }
+        .tab-toolbar .tool-state-label.status-active {
+            background: #e6f7e6;
+            color: #237804;
+        }
+        .tab-toolbar .tool-state-label.status-off {
+            background: #fff1f0;
+            color: #a8071a;
+        }
+        .tab-toolbar .tool-state-label.status-alert {
+            background: #fffbe6;
+            color: #ad6800;
         }
         /* Responsive */
         @media (max-width: 900px) {

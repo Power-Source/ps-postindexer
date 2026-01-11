@@ -17,6 +17,9 @@ class Content_Monitor {
 		if ( get_site_option( 'content_monitor_comment_monitoring' ) ) {
 			add_filter( 'preprocess_comment', array( &$this, 'comment_monitor' ), 10, 1 );
 		}
+		
+		// AJAX delete handler
+		add_action( 'wp_ajax_content_monitor_delete_entry', array( &$this, 'ajax_delete_entry' ) );
 	}
 
 	public function localization() {
@@ -396,6 +399,75 @@ PERMALINK", 'contentmon' );
 			} else {
 				showTab('meldungen');
 			}
+			
+			// AJAX Delete Handler
+			$(document).on('click', '.content-monitor-delete', function(e){
+				e.preventDefault();
+				var $link = $(this);
+				var $row = $link.closest('tr');
+				var index = $link.data('index');
+				
+				// Erste Klick: Bestätigung anzeigen
+				if (!$link.hasClass('confirm-delete')) {
+					$link.addClass('confirm-delete');
+					$link.html('✓ <?php echo esc_js(__('Löschen?', 'postindexer')); ?>');
+					$link.css({'background': '#dc3545', 'color': '#fff', 'padding': '4px 8px', 'border-radius': '3px', 'font-size': '11px'});
+					
+					// Zurücksetzen nach 3 Sekunden
+					setTimeout(function(){
+						if ($link.hasClass('confirm-delete')) {
+							$link.removeClass('confirm-delete');
+							$link.html('✕');
+							$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
+						}
+					}, 3000);
+					return;
+				}
+				
+				// Zweiter Klick: Tatsächlich löschen
+				$row.css('opacity', '0.5');
+				$link.css('pointer-events', 'none');
+				
+				$.post(ajaxurl, {
+					action: 'content_monitor_delete_entry',
+					index: index,
+					nonce: '<?php echo wp_create_nonce('content_monitor_delete'); ?>'
+				}, function(resp){
+					if (resp && resp.success) {
+						$row.fadeOut(300, function(){
+							$(this).remove();
+							// Update counter
+							var newCount = resp.data.new_count || 0;
+							$('.nav-tab .count').text(newCount);
+							// Update badge in monitoring tab if present
+							var $tabBadge = $('.ps-monitoring-tabs .tab-link[data-tool-key="content_monitor"] .tab-badge');
+							if (newCount > 0) {
+								if ($tabBadge.length) {
+									$tabBadge.text(newCount);
+								} else {
+									$('.ps-monitoring-tabs .tab-link[data-tool-key="content_monitor"]').append('<span class="tab-badge">' + newCount + '</span>');
+								}
+							} else {
+								$tabBadge.remove();
+							}
+						});
+					} else {
+						$row.css('opacity', '1');
+						$link.css('pointer-events', 'auto');
+						$link.removeClass('confirm-delete');
+						$link.html('✕');
+						$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
+						alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
+					}
+				}, 'json').fail(function(){
+					$row.css('opacity', '1');
+					$link.css('pointer-events', 'auto');
+					$link.removeClass('confirm-delete');
+					$link.html('✕');
+					$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
+					alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
+				});
+			});
 		});
 		</script>
 		<?php
@@ -421,7 +493,7 @@ PERMALINK", 'contentmon' );
 				echo '<td><a href="' . esc_url($entry['permalink']) . '" target="_blank">' . esc_html($entry['post_title']) . '</a></td>';
 				echo '<td>' . esc_html($entry['user_login']) . ' (ID: ' . intval($entry['user_id']) . ')</td>';
 				echo '<td>' . esc_html($entry['user_email']) . '</td>';
-				echo '<td><a href="?page=content-monitor&content_monitor_tab=meldungen&content_monitor_delete=' . $orig_idx . '" onclick="return confirm(\'Meldung wirklich löschen?\');" style="color:red;font-weight:bold;">X</a></td>';
+				echo '<td><a href="#" class="content-monitor-delete" data-index="' . $orig_idx . '" style="color:red;font-weight:bold;text-decoration:none;" title="' . esc_attr__('Meldung löschen', 'postindexer') . '">✕</a></td>';
 				echo '</tr>';
 			}
 			echo '</tbody></table>';
@@ -509,6 +581,33 @@ PERMALINK", 'contentmon' );
 		echo '</div>';
 
 		echo '</div>';
+	}
+	
+	public function ajax_delete_entry() {
+		if (!current_user_can('manage_network_options')) {
+			wp_send_json_error(['message' => 'forbidden'], 403);
+		}
+		
+		check_ajax_referer('content_monitor_delete', 'nonce');
+		
+		$index = isset($_POST['index']) ? intval($_POST['index']) : -1;
+		if ($index < 0) {
+			wp_send_json_error(['message' => 'invalid_index']);
+		}
+		
+		$badword_log = get_site_option('content_monitor_log', array());
+		if (!isset($badword_log[$index])) {
+			wp_send_json_error(['message' => 'entry_not_found']);
+		}
+		
+		unset($badword_log[$index]);
+		$badword_log = array_values($badword_log);
+		update_site_option('content_monitor_log', $badword_log);
+		
+		wp_send_json_success([
+			'new_count' => count($badword_log),
+			'message' => __('Meldung gelöscht.', 'postindexer')
+		]);
 	}
 }
 new Content_Monitor();

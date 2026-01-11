@@ -46,6 +46,12 @@ class Activity_Reports {
 		add_action( 'delete_post', array( $this, 'post_activity_remove' ) );
 		add_action( 'delete_blog', array( $this, 'post_activity_remove_blog' ) , 10, 1 );
 
+		// AJAX handler for user autocomplete
+		add_action( 'wp_ajax_reports_search_users', array( $this, 'ajax_search_users' ) );
+		
+		// Enqueue jQuery UI Autocomplete
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_autocomplete_scripts' ) );
+
 		// Reports direkt beim Erzeugen laden
 		$this->load_reports();
 	}
@@ -395,6 +401,7 @@ class Activity_Reports {
 			default:
 
 				?>
+				<style>.wrap h2:first-of-type { display: none; } .wrap > table { display: none !important; }</style>
 				<h2><?php _e( 'Reports', 'reports' ) ?></h2>
 				<?php
 				if ( count( $available_reports ) > 0 ) {
@@ -445,6 +452,39 @@ class Activity_Reports {
 			//---------------------------------------------------//
 		}
 		echo '</div>';
+	}
+
+	function enqueue_autocomplete_scripts() {
+		wp_enqueue_script('jquery-ui-autocomplete');
+	}
+
+	function ajax_search_users() {
+		if (!current_user_can('manage_network_options')) {
+			wp_send_json_error(['message' => 'forbidden'], 403);
+		}
+
+		$term = isset($_POST['term']) ? sanitize_text_field($_POST['term']) : '';
+		if (strlen($term) < 2) {
+			wp_send_json([]);
+			return;
+		}
+
+		$users = get_users([
+			'search' => '*' . $term . '*',
+			'search_columns' => ['user_login', 'user_nicename', 'display_name'],
+			'number' => 20,
+			'fields' => ['user_login', 'display_name']
+		]);
+
+		$results = [];
+		foreach ($users as $user) {
+			$results[] = [
+				'label' => $user->display_name . ' (' . $user->user_login . ')',
+				'value' => $user->user_login
+			];
+		}
+
+		wp_send_json($results);
 	}
 
 }
@@ -505,3 +545,4 @@ add_action('wp_ajax_psource_load_report', function() {
     }
     wp_die();
 });
+
