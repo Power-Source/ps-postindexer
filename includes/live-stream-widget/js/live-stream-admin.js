@@ -2,15 +2,15 @@ jQuery(document).ready( function($) {
 
 	// From http://www.johngadbois.com/adding-your-own-callbacks-to-wordpress-ajax-requests/
 	jQuery('body').ajaxSuccess(function(evt, request, settings) {
-		jQuery('a.live-stream-terms-show').click(live_stream_terms_show);
-		jQuery('ul.live-stream-admin-checklist input').click(live_stream_checklist_click);
-		jQuery('input.live-stream-terms-select-all').click(live_Stream_terms_select_all_click);	
+		jQuery('a.live-stream-terms-show').on('click', live_stream_terms_show);
+		jQuery('ul.live-stream-admin-checklist input').on('click', live_stream_checklist_click);
+		jQuery('input.live-stream-terms-select-all').on('click', live_Stream_terms_select_all_click);	
 	
 	});
 	
-	jQuery('a.live-stream-terms-show').click(live_stream_terms_show);
-	jQuery('ul.live-stream-admin-checklist input').click(live_stream_checklist_click);
-	jQuery('input.live-stream-terms-select-all').click(live_Stream_terms_select_all_click);	
+	jQuery('a.live-stream-terms-show').on('click', live_stream_terms_show);
+	jQuery('ul.live-stream-admin-checklist input').on('click', live_stream_checklist_click);
+	jQuery('input.live-stream-terms-select-all').on('click', live_Stream_terms_select_all_click);	
 	
 	function live_stream_terms_show(event) {
 

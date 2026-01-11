@@ -1,6 +1,5 @@
+// Datepicker wird jetzt nativ durch HTML5 <input type="date"> bereitgestellt
+// Keine jQuery UI Initialisierung mehr erforderlich
 jQuery(document).ready(function ($) {
-
-    jQuery('input#user-reports-filter-date-start').datepicker({dateFormat: 'yy-mm-dd'});
-    jQuery('input#user-reports-filter-date-end').datepicker({dateFormat: 'yy-mm-dd'});
-
+    // Datepicker sind bereits funktional durch type="date"
 });

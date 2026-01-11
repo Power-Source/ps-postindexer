@@ -296,13 +296,8 @@ class UserReports {
 			$this->user_reports_admin_plugin_help();
 
 			/* enqueue our plugin styles */
-			wp_enqueue_style( 'jquery.ui.datepicker-css', $this->_settings['PLUGIN_URL'] . '/css/jquery.ui.smoothness/jquery-ui-1.8.18.custom.css',
-				false, '1.8.18' );
 			wp_enqueue_style( 'user-reports-admin-stylesheet', $this->_settings['PLUGIN_URL'] . '/css/user-reports-admin-styles.css',
 				false, $this->_settings['VERSION'] );
-
-			wp_enqueue_script( 'user-reports-admin', $this->_settings['PLUGIN_URL'] . '/js/user-reports-admin.js',
-				array( 'jquery', 'jquery-ui-core', 'jquery-ui-datepicker' ), $this->_settings['VERSION'] );
 		}
 	}
 
@@ -864,11 +859,11 @@ class UserReports {
 	function user_reports_show_filter_form_dates() {
 		?>
 		<label for="user-reports-filter-date-start">Von Datum</label>
-		<input type="text" size="10" name="date_start" id="user-reports-filter-date-start"
+		<input type="date" name="date_start" id="user-reports-filter-date-start"
 		       value="<?php echo isset($this->_filters['date_start']) ? date( 'Y-m-d', $this->_filters['date_start'] ) : ''; ?>" />
 
 		<label for="user-reports-filter-date-end">Bis Datum</label>
-		<input type="text" size="10" name="date_end" id="user-reports-filter-date-end"
+		<input type="date" name="date_end" id="user-reports-filter-date-end"
 		       value="<?php echo isset($this->_filters['date_end']) ? date( 'Y-m-d', $this->_filters['date_end'] ) : ''; ?>" />
 		<?php
 	}

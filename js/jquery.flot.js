@@ -794,7 +794,7 @@
             }
 
             if (options.grid.clickable)
-                eventHolder.click(onClick);
+                eventHolder.on("click", onClick);
 
             executeHooks(hooks.bindEvents, [eventHolder]);
         }

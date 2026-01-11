@@ -118,19 +118,19 @@ More detail and specific examples can be found in the included HTML file.
             var options = plot.getOptions();
             if (options.series.pie.show) {
                 if (options.grid.hoverable) {
-                    eventHolder.unbind("mousemove").mousemove(onMouseMove);
-                    eventHolder.bind("mouseleave", onMouseMove);
+                    eventHolder.off("mousemove").on("mousemove", onMouseMove);
+                    eventHolder.on("mouseleave", onMouseMove);
                 }
                 if (options.grid.clickable) {
-                    eventHolder.unbind("click").click(onClick);
+                    eventHolder.off("click").on("click", onClick);
                 }
             }
         });
 
         plot.hooks.shutdown.push(function (plot, eventHolder) {
-            eventHolder.unbind("mousemove", onMouseMove);
-            eventHolder.unbind("mouseleave", onMouseMove);
-            eventHolder.unbind("click", onClick);
+            eventHolder.off("mousemove", onMouseMove);
+            eventHolder.off("mouseleave", onMouseMove);
+            eventHolder.off("click", onClick);
             highlights = [];
         });
 

@@ -12,25 +12,12 @@ Text Domain: postindexer
 Domain Path: /languages
 */
 
-// +----------------------------------------------------------------------+
-// | Copyright 2018-2026 PSOURCE (https://github.com/Power-Source)                                |
-// +----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify |
-// | it under the terms of the GNU General Public License, version 2, as  |
-// | published by the Free Software Foundation.                           |
-// |                                                                      |
-// | This program is distributed in the hope that it will be useful,      |
-// | but WITHOUT ANY WARRANTY; without even the implied warranty of       |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        |
-// | GNU General Public License for more details.                         |
-// |                                                                      |
-// | You should have received a copy of the GNU General Public License    |
-// | along with this program; if not, write to the Free Software          |
-// | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,               |
-// | MA 02110-1301 USA                                                    |
-// +----------------------------------------------------------------------+
-
-// PS Update Manager - Hinweis wenn nicht installiert
+/*
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License (Version 2 - GPLv2) as published by
+the Free Software Foundation.
+*/
+// PSOURCE Manager - Hinweis wenn nicht installiert
 add_action( 'admin_notices', function() {
     // Prüfe ob Update Manager aktiv ist
     if ( ! function_exists( 'ps_register_product' ) && current_user_can( 'install_plugins' ) ) {
@@ -42,7 +29,7 @@ add_action( 'admin_notices', function() {
             $is_installed = isset( $all_plugins[ $plugin_file ] );
             
             echo '<div class="notice notice-warning is-dismissible"><p>';
-            echo '<strong>PS Chat:</strong> ';
+            echo '<strong>PSOURCE MANAGER:</strong> ';
             
             if ( $is_installed ) {
                 // Installiert aber inaktiv - Aktivierungs-Link
@@ -51,13 +38,13 @@ add_action( 'admin_notices', function() {
                     'activate-plugin_' . $plugin_file
                 );
                 echo sprintf(
-                    __( 'Aktiviere den <a href="%s">PS Update Manager</a> für automatische Updates von GitHub.', 'psource-chat' ),
+                    __( 'Aktiviere den <a href="%s">PSOURCE Manager</a> für automatische Updates von GitHub.', 'psource-chat' ),
                     esc_url( $activate_url )
                 );
             } else {
                 // Nicht installiert - Download-Link
                 echo sprintf(
-                    __( 'Installiere den <a href="%s" target="_blank">PS Update Manager</a> für automatische Updates aller PSource Plugins & Themes.', 'psource-chat' ),
+                    __( 'Installiere den <a href="%s" target="_blank">PSOURCE Manager</a> für automatische Updates aller PSource Plugins & Themes.', 'psource-chat' ),
                     'https://github.com/Power-Source/ps-update-manager/releases/latest'
                 );
             }
