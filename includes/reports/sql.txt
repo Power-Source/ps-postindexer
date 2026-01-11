@@ -32,3 +32,12 @@ CREATE TABLE `wp_reports_comment_activity` (
   `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
   PRIMARY KEY  (`active_ID`)
 ) ENGINE=InnoDB;
+
+CREATE TABLE `wp_reports_page_activity` (
+  `active_ID` bigint(20) unsigned NOT NULL auto_increment,
+  `blog_ID` bigint(35) NOT NULL default '0',
+  `user_ID` bigint(35) NOT NULL default '0',
+  `post_ID` bigint(35) NOT NULL default '0',
+  `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
+  PRIMARY KEY  (`active_ID`)
+) ENGINE=InnoDB;

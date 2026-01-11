@@ -121,33 +121,26 @@ class Activity_Reports {
 				PRIMARY KEY  (`active_ID`)
 			) $charset_collate;";
 
-			maybe_create_table( "{$wpdb->base_prefix}reports_user_activity", $user_activity_table );
-			maybe_create_table( "{$wpdb->base_prefix}reports_post_activity", $post_activity_table );
-			maybe_create_table( "{$wpdb->base_prefix}reports_comment_activity", $comment_activity_table );
+		$page_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_page_activity` (
+			`active_ID` bigint(20) unsigned NOT NULL auto_increment,
+			`blog_ID` bigint(35) NOT NULL default '0',
+			`user_ID` bigint(35) NOT NULL default '0',
+			`post_ID` bigint(35) NOT NULL default '0',
+			`date_time` datetime NOT NULL default '0000-00-00 00:00:00',
+			PRIMARY KEY  (`active_ID`)
+		) $charset_collate;";
 
-			update_site_option( 'reports_installed', 'yes' );
+		maybe_create_table( "{$wpdb->base_prefix}reports_user_activity", $user_activity_table );
+		maybe_create_table( "{$wpdb->base_prefix}reports_post_activity", $post_activity_table );
+		maybe_create_table( "{$wpdb->base_prefix}reports_comment_activity", $comment_activity_table );
+		maybe_create_table( "{$wpdb->base_prefix}reports_page_activity", $page_activity_table );
+
+		update_site_option( 'reports_installed', 'yes' );
 		}
 	}
 
 	function add_report( $name, $nicename, $description ) {
 		$this->available_reports[] = array( $name, $nicename, $description );
-	}
-
-	function user_activity() {
-		global $wpdb, $current_user;
-
-		if ( !empty($current_user->ID) ){
-			$table = $wpdb->base_prefix . "reports_user_activity";
-			$wpdb->query( 
-				$wpdb->prepare(
-					"INSERT INTO $table (user_ID, location, date_time) 
-					VALUES ( %d, '%s', '%s' )",
-					$current_user->ID,
-					esc_url_raw( $_SERVER['SERVER_NAME'] . $_SERVER['REQUEST_URI'] ),
-					current_time( 'mysql', 1 )
-				)
-			);
-		}
 	}
 
 	function comment_activity( $comment_ID ) {

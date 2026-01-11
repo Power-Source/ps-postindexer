@@ -1,4 +1,13 @@
 <?php
+require_once dirname( __DIR__ ) . '/report-graphs/open-flash-chart/open-flash-chart.php';
+
+// Stelle sicher, dass Konstanten definiert sind
+if( ! defined( 'REPORTS_PLUGIN_DIR' ) )
+	define( 'REPORTS_PLUGIN_DIR', plugin_dir_path( dirname(__DIR__) ) . 'reports-files/' );
+
+if( ! defined( 'REPORTS_PLUGIN_URL' ) )
+	define( 'REPORTS_PLUGIN_URL', plugin_dir_url( dirname(__DIR__) ) . 'reports-files/' );
+
 global $activity_reports;
 if (!isset($activity_reports) || !is_object($activity_reports)) return;
 
