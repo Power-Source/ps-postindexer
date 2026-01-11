@@ -27,13 +27,33 @@ function report_blog_posts_ouput(){
 	switch( $action ) {
 		//---------------------------------------------------//
 		default:
+			// Hole indexierte Blogs aus Data Source
+			$data_source = $activity_reports->get_data_source();
+			$indexed_blogs = $data_source->get_indexed_blogs();
 			?>
 			<form name="report" method="POST" action="?page=reports&action=view-report&report=blog-posts&report-action=view">
 				<table class="form-table">
 					<?php if ( is_multisite() ) { ?>
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Blog ID', 'reports' ) ?></th>
-						<td><input type="text" name="blog_ID" id="blog_ID" style="width: 95%" tabindex='1' maxlength="200" value="" /></td>
+						<th scope="row"><?php _e( 'Blog', 'reports' ) ?></th>
+						<td>
+							<select name="blog_ID" id="blog_ID" style="width: 95%">
+								<option value=""><?php _e( '-- Select Blog --', 'reports' ); ?></option>
+								<?php foreach ( $indexed_blogs as $blog ) : 
+									$blog_details = get_blog_details( $blog->blog_id, false );
+									if ( $blog_details ) :
+								?>
+									<option value="<?php echo esc_attr( $blog->blog_id ); ?>">
+										<?php echo esc_html( $blog_details->blogname ); ?> 
+										(ID: <?php echo $blog->blog_id; ?>, <?php printf( __( '%d posts', 'reports' ), $blog->post_count ); ?>)
+									</option>
+								<?php 
+									endif;
+								endforeach; ?>
+							</select>
+							<br />
+							<small><?php _e( 'Only blogs with indexed posts are shown', 'reports' ); ?></small>
+						</td>
 					</tr>
 					<?php } else { ?>
 						<input type="hidden" name="blog_ID" id="blog_ID" value="0" />
@@ -75,31 +95,13 @@ function report_blog_posts_ouput(){
                 </p>
                 <?php
 				//=======================================//
-				$report_data = array();
-				$days = 0;
+				// Nutze die neue Data Source aus dem Plugin-Core
+				$data_source = $activity_reports->get_data_source();
 				$total_days = $period;
-				$total_days_safe = $period + 3;
 				$date_format = get_option('date_format');
 
-				// Performance-Optimierung: SQL liefert direkt die Tageszählung
-				$table = $wpdb->base_prefix . "reports_post_activity";
-				$date_time = reports_days_ago( $total_days_safe, 'Y-m-d' );
-				$query_date_format = '%Y-%m-%d';
-				$query = $wpdb->prepare(
-					"SELECT DATE_FORMAT(date_time, '%s') as formatted_date, COUNT(*) as count
-					FROM $table
-					WHERE blog_ID = %d AND date_time > '%s'
-					GROUP BY formatted_date",
-					$query_date_format,
-					$blog_id,
-					$date_time . ' 00:00:00'
-				);
-
-				$report_results = $wpdb->get_results( $query, ARRAY_A );
-				$counts_by_date = array();
-				foreach ($report_results as $row) {
-					$counts_by_date[$row['formatted_date']] = (int)$row['count'];
-				}
+				// Hole Daten direkt aus dem indexierten Post Index
+				$counts_by_date = $data_source->get_blog_posts_by_date( $blog_id, $period, 'post' );
 
 				$report_data = array();
 				$days = 0;

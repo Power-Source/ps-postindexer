@@ -77,63 +77,12 @@ class Activity_Reports {
 		if ( get_site_option( 'reports_installed' ) == '' )
 			add_site_option( 'reports_installed', 'no' );
 
+		// DEPRECATED: Activity-Tabellen wurden entfernt
+		// Reports nutzen jetzt direkt den Post Index (network_posts)
+		// Siehe: class-reports-data-source.php
+		
 		if ( get_site_option( 'reports_installed' ) !== 'yes' ) {
-
-			if( @is_file( ABSPATH . '/wp-admin/includes/upgrade.php' ) )
-				include_once( ABSPATH . '/wp-admin/includes/upgrade.php' );
-			else
-				die( __( 'We have problem finding your \'/wp-admin/upgrade-functions.php\' and \'/wp-admin/includes/upgrade.php\'', 'reports' ) );
-
-			$charset_collate = '';
-
-			if ( ! empty($wpdb->charset) )
-				$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-			if ( ! empty($wpdb->collate) )
-				$charset_collate .= " COLLATE $wpdb->collate";
-
-			$user_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_user_activity` (
-				`active_ID` bigint(20) unsigned NOT NULL auto_increment,
-				`user_ID` bigint(35) NOT NULL default '0',
-				`location` TEXT,
-				`date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-				PRIMARY KEY (`active_ID`)
-			) $charset_collate;";
-
-			$post_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_post_activity` (
-				`active_ID` bigint(20) unsigned NOT NULL auto_increment,
-				`blog_ID` bigint(35) NOT NULL default '0',
-				`user_ID` bigint(35) NOT NULL default '0',
-				`post_ID` bigint(35) NOT NULL default '0',
-				`post_type` VARCHAR(255),
-				`date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-				PRIMARY KEY  (`active_ID`)
-			) $charset_collate;";
-
-			$comment_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_comment_activity` (
-				`active_ID` bigint(20) unsigned NOT NULL auto_increment,
-				`blog_ID` bigint(35) NOT NULL default '0',
-				`user_ID` bigint(35) NOT NULL default '0',
-				`user_email` VARCHAR(255) default '0',
-				`comment_ID` bigint(35) NOT NULL default '0',
-				`date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-				PRIMARY KEY  (`active_ID`)
-			) $charset_collate;";
-
-		$page_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_page_activity` (
-			`active_ID` bigint(20) unsigned NOT NULL auto_increment,
-			`blog_ID` bigint(35) NOT NULL default '0',
-			`user_ID` bigint(35) NOT NULL default '0',
-			`post_ID` bigint(35) NOT NULL default '0',
-			`date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-			PRIMARY KEY  (`active_ID`)
-		) $charset_collate;";
-
-		maybe_create_table( "{$wpdb->base_prefix}reports_user_activity", $user_activity_table );
-		maybe_create_table( "{$wpdb->base_prefix}reports_post_activity", $post_activity_table );
-		maybe_create_table( "{$wpdb->base_prefix}reports_comment_activity", $comment_activity_table );
-		maybe_create_table( "{$wpdb->base_prefix}reports_page_activity", $page_activity_table );
-
-		update_site_option( 'reports_installed', 'yes' );
+			update_site_option( 'reports_installed', 'yes' );
 		}
 	}
 
@@ -141,110 +90,9 @@ class Activity_Reports {
 		$this->available_reports[] = array( $name, $nicename, $description );
 	}
 
-	function comment_activity( $comment_ID ) {
-		global $wpdb, $current_site;
-
-		$comment_details = get_comment($comment_ID);
-		if ( !empty($comment_details->comment_content) ){
-			$table = $wpdb->base_prefix . "reports_comment_activity";
-			$comment_activity_count = $wpdb->get_var( 
-				$wpdb->prepare( 
-					"SELECT COUNT(*) FROM $table WHERE blog_ID = %d AND comment_ID = %d",
-					$wpdb->blogid,
-					$comment_ID
-				)
-			);
-			if ($comment_activity_count == '0') {
-				$table = $wpdb->base_prefix . "reports_comment_activity";
-				$wpdb->query( 
-					$wpdb->prepare(
-						"INSERT INTO $table (blog_ID, user_ID, user_email, comment_ID, date_time) 
-						VALUES ( %d, %d, '%s', %d, '%s' )",
-						$wpdb->blogid,
-						$comment_details->user_id,
-						$comment_details->comment_author_email,
-						$comment_ID,
-						current_time( 'mysql', 1 )
-					)
-				);
-			}
-		}
-	}
-
-	function comment_activity_remove( $comment_ID ) {
-		global $wpdb;
-		$table = $wpdb->base_prefix . "reports_comment_activity";
-		$wpdb->query( 
-			$wpdb->prepare( 
-				"DELETE FROM $table WHERE comment_ID = %d AND blog_ID = %d",
-				$comment_ID,
-				$wpdb->blogid
-			)
-		);
-	}
-
-	function comment_activity_remove_blog( $blog_ID ) {
-		global $wpdb;
-		$table = $wpdb->base_prefix . "reports_comment_activity";
-		$wpdb->query( 
-			$wpdb->prepare( 
-				"DELETE FROM $table WHERE blog_ID = %d",
-				$wpdb->blogid
-			)
-		);
-	}
-
-	function post_activity( $post_ID ) {
-		global $wpdb, $current_site;
-
-		$post_details = get_post($post_ID);
-		if ( !empty($post_details->post_content) && $post_details->post_type != 'revision' && $post_details->post_status == 'publish' ){
-			$table = $wpdb->base_prefix . "reports_post_activity";
-			$post_activity_count = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(*) FROM $table  WHERE blog_ID = %d AND post_ID = %d",
-					$wpdb->blogid,
-					$post_ID
-				)
-			);
-			if ($post_activity_count == '0') {		
-				$table = $wpdb->base_prefix . "reports_post_activity";
-				$wpdb->query( 
-					$wpdb->prepare( 
-						"INSERT INTO $table (blog_ID, user_ID, post_ID, post_type, date_time) VALUES ( %d, '%s', %d, '%s', '%s' )",
-						$wpdb->blogid,
-						$post_details->post_author,
-						$post_ID,
-						$post_details->post_type,
-						current_time( 'mysql', 1 )
-					)
-				);
-			}
-		}
-	}
-
-	function post_activity_remove( $post_ID ) {
-		global $wpdb;
-		$table = $wpdb->base_prefix . "reports_post_activity";
-		$wpdb->query( 
-			$wpdb->prepare( 
-				"DELETE FROM $table WHERE post_ID = %d AND blog_ID = %d",
-				$post_ID,
-				$wpdb->blogid
-			)
-		);
-	}
-
-	function post_activity_remove_blog( $blog_ID ) {
-		global $wpdb;
-		$table = $wpdb->base_prefix . "reports_post_activity";
-		$wpdb->query( 
-			$wpdb->prepare( 
-				"DELETE FROM $table WHERE blog_ID = %d",
-				$wpdb->blogid
-			)
-		);
-	}
+	// DEPRECATED: Activity-Logging-Methoden wurden entfernt
+	// Reports nutzen jetzt direkt den Post Index über Reports_Data_Source
+	// Diese Methoden sind nicht mehr notwendig
 
 	function css() {
 		global $wpdb, $parent_file;

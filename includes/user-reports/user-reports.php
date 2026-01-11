@@ -708,7 +708,24 @@ class UserReports {
 		$content_types = array();
 
 		if ( $this->has_post_indexer_plugin() ) {
-			$content_types['post'] = __( 'Beitrag', 'postindexer' );
+			// Nutze die Reports Data Source für indexierte Post Types
+			global $activity_reports;
+			if ( isset( $activity_reports ) && method_exists( $activity_reports, 'get_data_source' ) ) {
+				$data_source = $activity_reports->get_data_source();
+				$post_types = $data_source->get_available_post_types();
+				
+				foreach ( $post_types as $post_type ) {
+					$post_type_obj = get_post_type_object( $post_type );
+					if ( $post_type_obj ) {
+						$content_types[ $post_type ] = $post_type_obj->labels->name;
+					} else {
+						$content_types[ $post_type ] = ucfirst( $post_type );
+					}
+				}
+			} else {
+				// Fallback: nur Post
+				$content_types['post'] = __( 'Beitrag', 'postindexer' );
+			}
 		} else {
 			if ( ! is_multisite() || ! is_network_admin() ) {
 				foreach ( (array) get_post_types( array( 'show_ui' => true ), 'name' ) as $post_type => $details ) {
@@ -763,9 +780,42 @@ class UserReports {
 		if ( ( is_multisite() ) && ( $this->has_post_indexer_plugin() ) ) {
 			if ( is_network_admin() ) {
 
+				// Nutze die Reports Data Source für indexierte Blogs
+				global $activity_reports;
 				$blogs = array(
 					'0' => __( 'Alle Blogs', 'postindexer' ),
 				);
+				
+				if ( isset( $activity_reports ) && method_exists( $activity_reports, 'get_data_source' ) ) {
+					$data_source = $activity_reports->get_data_source();
+					$indexed_blogs = $data_source->get_indexed_blogs();
+					
+					foreach ( $indexed_blogs as $blog ) {
+						$blog_details = get_blog_details( $blog->blog_id, false );
+						if ( $blog_details ) {
+							// Stelle sicher, dass blogname als Eigenschaft existiert
+							$blog_name = '';
+							if ( isset( $blog_details->blogname ) ) {
+								$blog_name = $blog_details->blogname;
+							} elseif ( is_object( $blog_details ) && property_exists( $blog_details, 'blogname' ) ) {
+								$blog_name = $blog_details->blogname;
+							} else {
+								// Fallback: Nutze den Blog-Namen aus WP
+								$blog_name = get_blog_option( $blog->blog_id, 'blogname' );
+							}
+							
+							if ( ! empty( $blog_name ) ) {
+								$blogs[ $blog->blog_id ] = sprintf(
+									'%s (ID: %d, %d %s)',
+									$blog_name,
+									$blog->blog_id,
+									$blog->post_count,
+									__( 'Beiträge', 'postindexer' )
+								);
+							}
+						}
+					}
+				}
 
 			} else {
 				$current_blog = get_blog_details( $wpdb->blogid );
@@ -838,10 +888,56 @@ class UserReports {
 				<?php
 			}
 		} else {
+			// Network Admin: Nutze Autocomplete für indexierte Benutzer
 			$user_login = ! empty( $this->_filters['user_login'] ) ? $this->_filters['user_login'] : '';
 			?>
 			<label for="user-reports-filter-users"><?php _e( 'Benutzer', 'postindexer' ); ?>: </label>
-			<input type="text" id="user-reports-filter-users" name="user_login" value="<?php echo esc_attr( $user_login ); ?>" />
+			<input type="text" id="user-reports-filter-users" name="user_login" 
+			       list="user_login_list" value="<?php echo esc_attr( $user_login ); ?>" 
+			       placeholder="<?php esc_attr_e( 'Benutzername eingeben...', 'postindexer' ); ?>" />
+			<datalist id="user_login_list"></datalist>
+			<script>
+			(function() {
+				const userInput = document.getElementById('user-reports-filter-users');
+				const userList = document.getElementById('user_login_list');
+				let debounceTimeout;
+
+				if (!userInput || !userList) return;
+
+				userInput.addEventListener('input', function() {
+					clearTimeout(debounceTimeout);
+					const term = this.value.trim();
+					
+					if (term.length < 2) {
+						userList.innerHTML = '';
+						return;
+					}
+
+					debounceTimeout = setTimeout(function() {
+						fetch(ajaxurl, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/x-www-form-urlencoded',
+							},
+							body: new URLSearchParams({
+								action: 'reports_search_users',
+								term: term
+							})
+						})
+						.then(response => response.json())
+						.then(data => {
+							userList.innerHTML = '';
+							data.forEach(user => {
+								const option = document.createElement('option');
+								option.value = user;
+								userList.appendChild(option);
+							});
+						})
+						.catch(error => console.error('Error fetching users:', error));
+					}, 300);
+				});
+			})();
+			</script>
 			<?php
 		}
 	}

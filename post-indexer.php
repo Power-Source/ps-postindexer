@@ -152,59 +152,11 @@ register_activation_hook(__FILE__, function() {
     if( ! defined( 'REPORTS_PLUGIN_DIR' ) )
         define( 'REPORTS_PLUGIN_DIR', plugin_dir_path( POST_INDEXER_PLUGIN_DIR . 'includes/reports/' ) . 'reports-files/' );
     
-    // Erstelle die Tabellen direkt
-    if( @is_file( ABSPATH . '/wp-admin/includes/upgrade.php' ) ) {
-        include_once( ABSPATH . '/wp-admin/includes/upgrade.php' );
-        
-        $charset_collate = '';
-        if ( ! empty($wpdb->charset) )
-            $charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-        if ( ! empty($wpdb->collate) )
-            $charset_collate .= " COLLATE $wpdb->collate";
-        
-        $user_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_user_activity` (
-            `active_ID` bigint(20) unsigned NOT NULL auto_increment,
-            `user_ID` bigint(35) NOT NULL default '0',
-            `location` TEXT,
-            `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-            PRIMARY KEY (`active_ID`)
-        ) $charset_collate;";
-        
-        $post_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_post_activity` (
-            `active_ID` bigint(20) unsigned NOT NULL auto_increment,
-            `blog_ID` bigint(35) NOT NULL default '0',
-            `user_ID` bigint(35) NOT NULL default '0',
-            `post_ID` bigint(35) NOT NULL default '0',
-            `post_type` VARCHAR(255),
-            `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-            PRIMARY KEY  (`active_ID`)
-        ) $charset_collate;";
-        
-        $comment_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_comment_activity` (
-            `active_ID` bigint(20) unsigned NOT NULL auto_increment,
-            `blog_ID` bigint(35) NOT NULL default '0',
-            `user_ID` bigint(35) NOT NULL default '0',
-            `user_email` VARCHAR(255) default '0',
-            `comment_ID` bigint(35) NOT NULL default '0',
-            `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-            PRIMARY KEY  (`active_ID`)
-        ) $charset_collate;";
-        
-        $page_activity_table = "CREATE TABLE `{$wpdb->base_prefix}reports_page_activity` (
-            `active_ID` bigint(20) unsigned NOT NULL auto_increment,
-            `blog_ID` bigint(35) NOT NULL default '0',
-            `user_ID` bigint(35) NOT NULL default '0',
-            `post_ID` bigint(35) NOT NULL default '0',
-            `date_time` datetime NOT NULL default '0000-00-00 00:00:00',
-            PRIMARY KEY  (`active_ID`)
-        ) $charset_collate;";
-        
-        maybe_create_table( "{$wpdb->base_prefix}reports_user_activity", $user_activity_table );
-        maybe_create_table( "{$wpdb->base_prefix}reports_post_activity", $post_activity_table );
-        maybe_create_table( "{$wpdb->base_prefix}reports_comment_activity", $comment_activity_table );
-        maybe_create_table( "{$wpdb->base_prefix}reports_page_activity", $page_activity_table );
-        
-        // Speichere die Installationsversion
+    // DEPRECATED: Activity-Tabellen wurden entfernt
+    // Reports nutzen jetzt direkt den Post Index (network_posts)
+    // Siehe: includes/reports/class-reports-data-source.php
+    
+    if ( get_site_option( 'reports_installed' ) !== 'yes' ) {
         update_site_option( 'reports_installed', 'yes' );
         update_site_option( 'reports_version', '1.0.8' );
     }

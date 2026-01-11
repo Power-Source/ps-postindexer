@@ -116,31 +116,13 @@ function report_user_comments_ouput() {
                 </p>
                 <?php
 				//=======================================//
-				$report_data = array();
-				$days = 0;
+				// Nutze die neue Data Source aus dem Plugin-Core
+				$data_source = $activity_reports->get_data_source();
 				$total_days = $period;
-				$total_days_safe = $period + 3;
 				$date_format = get_option('date_format');
 
-				// Performance-Optimierung: SQL liefert direkt die Tageszählung
-				$table = $wpdb->base_prefix . "reports_comment_activity";
-				$date_time = reports_days_ago( $total_days_safe, 'Y-m-d' );
-				$query_date_format = '%Y-%m-%d';
-				$query = $wpdb->prepare(
-					"SELECT DATE_FORMAT(date_time, '%s') as formatted_date, COUNT(*) as count
-					FROM $table
-					WHERE user_ID = %d AND date_time > '%s'
-					GROUP BY formatted_date",
-					$query_date_format,
-					$user_id,
-					$date_time . ' 00:00:00'
-				);
-
-				$report_results = $wpdb->get_results( $query, ARRAY_A );
-				$counts_by_date = array();
-				foreach ($report_results as $row) {
-					$counts_by_date[$row['formatted_date']] = (int)$row['count'];
-				}
+				// Hole Daten direkt aus dem indexierten System
+				$counts_by_date = $data_source->get_user_comments_by_date( $user_ID, $period );
 
 				$report_data = array();
 				$days = 0;

@@ -65,21 +65,25 @@ if ( ! class_exists( 'Reports_Data_Source' ) ) {
         /**
          * Hole alle Blogs die Einträge im Index haben
          * 
-         * @return array Array von Blog IDs
+         * @return array Array von Blog Objekten mit blog_id und post_count
          */
         public function get_indexed_blogs() {
             if ( ! $this->model ) {
-                return array( get_current_blog_id() );
+                return array();
             }
 
             $blog_totals = $this->model->get_summary_blog_totals();
             $blogs = array();
             
             foreach ( $blog_totals as $blog ) {
-                $blogs[] = $blog->BLOG_ID;
+                // Erstelle ein Objekt mit den benötigten Eigenschaften
+                $blog_obj = new \stdClass();
+                $blog_obj->blog_id = $blog->BLOG_ID;
+                $blog_obj->post_count = isset( $blog->Total ) ? $blog->Total : 0;
+                $blogs[] = $blog_obj;
             }
             
-            return ! empty( $blogs ) ? $blogs : array( get_current_blog_id() );
+            return ! empty( $blogs ) ? $blogs : array();
         }
 
         /**
@@ -211,6 +215,18 @@ if ( ! class_exists( 'Reports_Data_Source' ) ) {
         }
 
         /**
+         * Hole Page-Zähler pro Tag für einen Benutzer
+         * Alias für get_user_posts_by_date mit post_type='page'
+         * 
+         * @param int $user_id WordPress User ID
+         * @param int $days Anzahl der Tage zurück
+         * @return array Array mit Datums-Keys (Y-m-d) und Zählwert-Values
+         */
+        public function get_user_pages_by_date( $user_id, $days = 30 ) {
+            return $this->get_user_posts_by_date( $user_id, $days, 'page' );
+        }
+
+        /**
          * Hole Post-Zähler pro Blog
          * 
          * @param int $limit Limit für Top Blogs
@@ -318,15 +334,15 @@ if ( ! class_exists( 'Reports_Data_Source' ) ) {
         }
 
         /**
-         * Hole Post-Zähler pro Tag für einen Benutzer
+         * Hole Post-Zähler pro Tag für einen Blog
          * Für Chart-Darstellung in Reports
          * 
-         * @param int $user_id WordPress User ID
+         * @param int $blog_id WordPress Blog/Site ID
          * @param int $days Anzahl der Tage zurück
          * @param string $post_type Post Type (post, page, etc.)
          * @return array Array mit Datums-Keys (Y-m-d) und Zählwert-Values
          */
-        public function get_user_posts_by_date( $user_id, $days = 30, $post_type = 'post' ) {
+        public function get_blog_posts_by_date( $blog_id, $days = 30, $post_type = 'post' ) {
             if ( ! $this->model ) {
                 return array();
             }
@@ -334,31 +350,79 @@ if ( ! class_exists( 'Reports_Data_Source' ) ) {
             $data = array();
             $date_limit = date( 'Y-m-d', strtotime( "-{$days} days" ) );
 
-            // Nutze das Model um alle Posts des Users zu holen
-            $posts = $this->get_user_posts( $user_id, $days, $post_type );
+            // Nutze das Model um alle Posts des Blogs zu holen
+            $posts = $this->get_posts_by_blog( $blog_id, 9999, $post_type );
             
-            // Aggregiere nach Datum
+            // Filtere nach Datum und aggregiere
             foreach ( $posts as $post ) {
-                $date = date( 'Y-m-d', strtotime( $post->post_date_gmt ) );
-                if ( ! isset( $data[ $date ] ) ) {
-                    $data[ $date ] = 0;
+                $post_date = date( 'Y-m-d', strtotime( $post->post_date_gmt ?? $post->post_date ) );
+                if ( $post_date >= $date_limit ) {
+                    if ( ! isset( $data[ $post_date ] ) ) {
+                        $data[ $post_date ] = 0;
+                    }
+                    $data[ $post_date ]++;
                 }
-                $data[ $date ]++;
             }
 
             return $data;
         }
 
         /**
-         * Hole Page-Zähler pro Tag für einen Benutzer
-         * Alias für get_user_posts mit post_type='page'
+         * Hole Comment-Zähler pro Tag für einen Blog
          * 
-         * @param int $user_id WordPress User ID
+         * @param int $blog_id WordPress Blog/Site ID
          * @param int $days Anzahl der Tage zurück
          * @return array Array mit Datums-Keys (Y-m-d) und Zählwert-Values
          */
-        public function get_user_pages_by_date( $user_id, $days = 30 ) {
-            return $this->get_user_posts_by_date( $user_id, $days, 'page' );
+        public function get_blog_comments_by_date( $blog_id, $days = 30 ) {
+            if ( ! $this->model ) {
+                return array();
+            }
+
+            $data = array();
+            $date_limit = date( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+
+            // Wechsle zu Blog
+            if ( is_multisite() ) {
+                switch_to_blog( $blog_id );
+            }
+
+            // Hole alle Comments aus dem lokalen Blog
+            $comments = get_comments( array(
+                'status' => 'approve',
+                'number' => -1,
+                'date_query' => array(
+                    'after' => $date_limit,
+                ),
+                'orderby' => 'comment_date_gmt',
+                'order' => 'DESC',
+            ) );
+
+            foreach ( $comments as $comment ) {
+                $date = date( 'Y-m-d', strtotime( $comment->comment_date_gmt ) );
+                if ( ! isset( $data[ $date ] ) ) {
+                    $data[ $date ] = 0;
+                }
+                $data[ $date ]++;
+            }
+
+            if ( is_multisite() ) {
+                restore_current_blog();
+            }
+
+            return $data;
+        }
+
+        /**
+         * Hole Page-Zähler pro Tag für einen Blog
+         * Alias für get_blog_posts_by_date mit post_type='page'
+         * 
+         * @param int $blog_id WordPress Blog/Site ID
+         * @param int $days Anzahl der Tage zurück
+         * @return array Array mit Datums-Keys (Y-m-d) und Zählwert-Values
+         */
+        public function get_blog_pages_by_date( $blog_id, $days = 30 ) {
+            return $this->get_blog_posts_by_date( $blog_id, $days, 'page' );
         }
 
         /**
