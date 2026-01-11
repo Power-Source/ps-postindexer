@@ -2,9 +2,9 @@
 /*
 Plugin Name: Multisite Index
 Plugin URI: https://power-source.github.io/ps-postindexer/
-Description: Ein mächtiges Multisite-Index Plugin - Bringe deinen Content dahin wo du ihn brauchst!
+Description: Ein mächtiges Multisite-Index Plugin - Bringe deinen Content dahin wo du ihn brauchst und überwache ihn im ganzen Netzwerk!
 Author: PSOURCE
-Version: 1.0.0
+Version: 1.0.1
 Author URI: https://github.com/Power-Source
 Requires at least: 4.9
 Network: true
