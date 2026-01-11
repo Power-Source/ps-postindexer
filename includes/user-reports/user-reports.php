@@ -257,7 +257,7 @@ class UserReports {
 			$report_filename .= date( 'ymd' );
 
 			if ( $download_type == "pdf" ) {
-				require_once dirname( __FILE__ ) . '/lib/dompdf/dompdf_config.inc.php';
+				require_once dirname( __FILE__ ) . '/lib/dompdf-wrapper.php';
 
 				$this->_filters['per_page'] = 0;
 				$this->_filters['doing_reports'] = 'pdf';

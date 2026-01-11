@@ -33,7 +33,8 @@ function report_user_posts_ouput(){
 					<tr valign="top">
 						<th scope="row"><?php _e( 'Username', 'reports' ) ?></th>
 						<td>
-							<input type="text" name="user_login" id="user_login" class="user-autocomplete" style="width: 95%" tabindex='1' maxlength="200" value="" autocomplete="off" />
+							<input type="text" name="user_login" id="user_login" list="user_login_list" style="width: 95%" tabindex='1' maxlength="200" value="" />
+							<datalist id="user_login_list"></datalist>
 							<br />
 							<?php _e( 'Case Sensitive', 'reports' ) ?>
 						</td>
@@ -54,19 +55,44 @@ function report_user_posts_ouput(){
 				</p>
 			</form>
 			<script>
-			jQuery(document).ready(function($){
-				$('#user_login').autocomplete({
-					source: function(request, response) {
-						$.post(ajaxurl, {
-							action: 'reports_search_users',
-							term: request.term
-						}, function(data) {
-							response(data);
-						}, 'json');
-					},
-					minLength: 2
+			(function() {
+				const userInput = document.getElementById('user_login');
+				const userList = document.getElementById('user_login_list');
+				let debounceTimeout;
+
+				userInput.addEventListener('input', function() {
+					clearTimeout(debounceTimeout);
+					const term = this.value.trim();
+					
+					if (term.length < 2) {
+						userList.innerHTML = '';
+						return;
+					}
+
+					debounceTimeout = setTimeout(function() {
+						fetch(ajaxurl, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/x-www-form-urlencoded',
+							},
+							body: new URLSearchParams({
+								action: 'reports_search_users',
+								term: term
+							})
+						})
+						.then(response => response.json())
+						.then(data => {
+							userList.innerHTML = '';
+							data.forEach(user => {
+								const option = document.createElement('option');
+								option.value = user;
+								userList.appendChild(option);
+							});
+						})
+						.catch(error => console.error('Error fetching users:', error));
+					}, 300);
 				});
-			});
+			})();
 			</script>
 			<?php
 		break;
@@ -90,31 +116,13 @@ function report_user_posts_ouput(){
                 </p>
                 <?php
 				//=======================================//
-				$report_data = array();
-				$days = 0;
+				// Nutze die neue Data Source aus dem Plugin-Core
+				$data_source = $activity_reports->get_data_source();
 				$total_days = $period;
-				$total_days_safe = $period + 3;
 				$date_format = get_option('date_format');
 
-				// Performance-Optimierung: SQL liefert direkt die Tageszählung
-				$table = $wpdb->base_prefix . "reports_post_activity";
-				$date_time = reports_days_ago( $total_days_safe, 'Y-m-d' );
-				$query_date_format = '%Y-%m-%d';
-				$query = $wpdb->prepare(
-					"SELECT DATE_FORMAT(date_time, '%s') as formatted_date, COUNT(*) as count
-					FROM $table
-					WHERE user_ID = %d AND date_time > '%s'
-					GROUP BY formatted_date",
-					$query_date_format,
-					$user_id,
-					$date_time . ' 00:00:00'
-				);
-
-				$report_results = $wpdb->get_results( $query, ARRAY_A );
-				$counts_by_date = array();
-				foreach ($report_results as $row) {
-					$counts_by_date[$row['formatted_date']] = (int)$row['count'];
-				}
+				// Hole Daten direkt aus dem indexierten Post Index
+				$counts_by_date = $data_source->get_user_posts_by_date( $user_ID, $period, 'post' );
 
 				$report_data = array();
 				$days = 0;

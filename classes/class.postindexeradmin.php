@@ -582,8 +582,8 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 			// Dashboard/Übersicht als erste Subpage (bisherige Seite)
 			add_submenu_page(
 				$main_slug,
-				__( 'Post Index', 'postindexer' ),
-				__( 'Post Index', 'postindexer' ),
+				__( 'Content Index', 'postindexer' ),
+				__( 'Content Index', 'postindexer' ),
 				$cap,
 				$main_slug,
 				array( $this, 'handle_postindexer_page' )
@@ -930,11 +930,11 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 
 			?>
 			<div id="post-indexer-summary" class="postbox ">
-				<h3 class="hndle"><span><?php _e( 'Beitrags Index Zusammenfassung', 'postindexer' ); ?></span></h3>
+				<h3 class="hndle"><span><?php _e( 'Content Index Zusammenfassung', 'postindexer' ); ?></span></h3>
 				<div class="inside">
 
 					<div class="table table_content">
-						<p class="sub"><?php _e( 'Indizierte Beitragstypen', 'postindexer' ); ?></p>
+						<p class="sub"><?php _e( 'Indizierte Contenttypen', 'postindexer' ); ?></p>
 						<?php
 						// Get the counts for the post types
 						$post_type_counts = $this->model->get_summary_post_types();

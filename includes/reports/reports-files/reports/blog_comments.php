@@ -11,7 +11,7 @@ if( ! defined( 'REPORTS_PLUGIN_URL' ) )
 global $activity_reports;
 if (!isset($activity_reports) || !is_object($activity_reports)) return;
 
-$activity_reports->add_report( __( 'Blog Comments', 'reports' ), 'blog-comments', __( 'Displays comment activity for a blog', 'reports' ) );
+$activity_reports->add_report( __( 'Blog-Kommentare', 'reports' ), 'blog-comments', __( 'Zeigt die Kommentaraktivität eines Blogs an', 'reports' ) );
 
 if (
     (isset($_GET['report']) && $_GET['report'] === 'blog-comments') ||
@@ -39,18 +39,18 @@ function report_blog_comments_ouput(){
 						<input type="hidden" name="blog_ID" id="blog_ID" value="0" />
 					<?php } ?>
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Period', 'reports' ) ?></th>
+						<th scope="row"><?php _e( 'Zeitraum', 'reports' ) ?></th>
 						<td>
 							<select name="period" id="period">
-								<option value="15" ><?php _e( '15 Days', 'reports' ); ?></option>
-								<option value="30" ><?php _e( '30 Days', 'reports' ); ?></option>
-								<option value="45" ><?php _e( '45 Days', 'reports' ); ?></option>
+								<option value="15" ><?php _e( '15 Tage', 'reports' ); ?></option>
+								<option value="30" ><?php _e( '30 Tage', 'reports' ); ?></option>
+								<option value="45" ><?php _e( '45 Tage', 'reports' ); ?></option>
 							</select>
 						</td>
 					</tr>
 				</table>
 				<p class="submit">
-					<input type="submit" name="Submit" class="button-primary" value="<?php _e( 'View', 'reports' ) ?>" />
+					<input type="submit" name="Submit" class="button-primary" value="<?php _e( 'Anzeigen', 'reports' ) ?>" />
 				</p>
 			</form>
 			<?php
@@ -62,7 +62,7 @@ function report_blog_comments_ouput(){
 			$blog = is_multisite() ? get_blog_details( $blog_id, false ) : true;
 			if ( ! $blog ) {
 				?>
-                <p><?php _e( 'Blog not found.', 'reports' ); ?></p>
+                <p><?php _e( 'Blog nicht gefunden.', 'reports' ); ?></p>
                 <?php
 			}
 			if ( $blog ) {
@@ -70,7 +70,7 @@ function report_blog_comments_ouput(){
                 <p>
                     <ul>
                         <li><strong><?php _e( 'Blog', 'reports' ); ?></strong>: <?php echo $blog_id; ?> (<?php echo get_site_url( $blog_id ); ?>)</li>
-                        <li><strong><?php _e( 'Period', 'reports' ); ?></strong>: <?php printf( __( '%d Days', 'reports' ), $period ); ?></li>
+                        <li><strong><?php _e( 'Zeitraum', 'reports' ); ?></strong>: <?php printf( __( '%d Tage', 'reports' ), $period ); ?></li>
                     </ul>
                 </p>
                 <?php

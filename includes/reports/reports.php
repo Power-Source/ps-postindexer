@@ -5,11 +5,15 @@ if( ! defined( 'REPORTS_PLUGIN_DIR' ) )
 if( ! defined( 'REPORTS_PLUGIN_URL' ) )
 	define( 'REPORTS_PLUGIN_URL', plugin_dir_url( __FILE__ ) . 'reports-files/' );
 
+// Lade den Data Source Helper für Zugriff auf indexierte Plugin-Core Daten
+require_once dirname( __FILE__ ) . '/class-reports-data-source.php';
+
 /**
  * Plugin main class
  **/
 class Activity_Reports {
     private static $instance = null;
+    private $data_source = null;
 
 	/**
 	 * Current version of the plugin
@@ -31,26 +35,14 @@ class Activity_Reports {
 	private function __construct() {
 		global $wp_version;
 
+		// Initialisiere den Data Source Helper für indexierte Daten
+		$this->data_source = new Reports_Data_Source();
+
 		add_action( 'admin_init', array( $this, 'make_current' ) );
 		add_action( 'admin_head', array( $this, 'css' ) );
 
-		// log user data
-		//add_action( 'admin_footer', array( &$this, 'user_activity' ) );
-		//add_action( 'wp_footer', array( &$this, 'user_activity' ) );
-		// log comment data
-		add_action( 'comment_post', array( $this, 'comment_activity' ) );
-		add_action( 'delete_comment', array( $this, 'comment_activity_remove' ) );
-		add_action( 'delete_blog', array( $this, 'comment_activity_remove_blog' ) , 10, 1 );
-		// log post data
-		add_action( 'save_post', array( $this, 'post_activity' ) );
-		add_action( 'delete_post', array( $this, 'post_activity_remove' ) );
-		add_action( 'delete_blog', array( $this, 'post_activity_remove_blog' ) , 10, 1 );
-
-		// AJAX handler for user autocomplete
+		// AJAX handler for user datalist (nutzt jetzt indexierte Daten)
 		add_action( 'wp_ajax_reports_search_users', array( $this, 'ajax_search_users' ) );
-		
-		// Enqueue jQuery UI Autocomplete
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_autocomplete_scripts' ) );
 
 		// Reports direkt beim Erzeugen laden
 		$this->load_reports();
@@ -454,10 +446,6 @@ class Activity_Reports {
 		echo '</div>';
 	}
 
-	function enqueue_autocomplete_scripts() {
-		wp_enqueue_script('jquery-ui-autocomplete');
-	}
-
 	function ajax_search_users() {
 		if (!current_user_can('manage_network_options')) {
 			wp_send_json_error(['message' => 'forbidden'], 403);
@@ -469,22 +457,18 @@ class Activity_Reports {
 			return;
 		}
 
-		$users = get_users([
-			'search' => '*' . $term . '*',
-			'search_columns' => ['user_login', 'user_nicename', 'display_name'],
-			'number' => 20,
-			'fields' => ['user_login', 'display_name']
-		]);
+		// Nutze indexierte Daten vom Plugin-Core statt genereller get_users()
+		// Das ist schneller und konsistenter mit dem Post Index
+		$users = $this->data_source->get_indexed_users( $term, 20 );
 
-		$results = [];
-		foreach ($users as $user) {
-			$results[] = [
-				'label' => $user->display_name . ' (' . $user->user_login . ')',
-				'value' => $user->user_login
-			];
-		}
+		wp_send_json($users);
+	}
 
-		wp_send_json($results);
+	/**
+	 * Getter für Data Source (ermöglicht Zugriff auf indexierte Daten in Report-Templates)
+	 */
+	public function get_data_source() {
+		return $this->data_source;
 	}
 
 }
