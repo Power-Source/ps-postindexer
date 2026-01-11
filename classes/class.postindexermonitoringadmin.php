@@ -54,6 +54,19 @@ class Postindexer_Monitoring_Admin {
     }
 
     public function render_monitoring_page() {
+        // Toggle-Handler
+        if (isset($_POST['ps_monitoring_toggle'])) {
+            check_admin_referer('ps_monitoring_toggle');
+            $toggle_key = isset($_POST['tool_key']) ? sanitize_key($_POST['tool_key']) : '';
+            $toggle_state = isset($_POST['tool_state']) && $_POST['tool_state'] === 'on';
+            if ($toggle_key) {
+                $this->set_tool_enabled($toggle_key, $toggle_state);
+                // Reload to reflect state
+                wp_safe_redirect(add_query_arg(['page' => 'ps-multisite-index-monitoring', 'tab' => $toggle_key], network_admin_url('admin.php')));
+                exit;
+            }
+        }
+
         // Aktiven Tab ermitteln
         $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'blog_activity';
         
@@ -103,7 +116,7 @@ class Postindexer_Monitoring_Admin {
         echo '<nav class="ps-monitoring-tabs">';
         foreach ($this->tools as $tool) {
             $is_active = ($active_tab === $tool['key']) ? 'active' : '';
-            $status_class = $tool_status[$tool['key']]['active'] ? 'status-active' : 'status-inactive';
+            $status_class = $tool_status[$tool['key']]['status_class'];
             $url = add_query_arg(['page' => 'ps-multisite-index-monitoring', 'tab' => $tool['key']], network_admin_url('admin.php'));
             
             echo '<a href="' . esc_url($url) . '" class="tab-link ' . $is_active . ' ' . $status_class . '">';
@@ -126,6 +139,24 @@ class Postindexer_Monitoring_Admin {
             echo '<div class="tab-header">';
             echo '<h2>' . esc_html($tool['name']) . '</h2>';
             echo '<p class="tab-description">' . esc_html($tool['desc']) . '</p>';
+            echo '<div class="tab-toolbar">';
+            echo '<form method="post" class="tab-toggle-form">';
+            wp_nonce_field('ps_monitoring_toggle');
+            echo '<input type="hidden" name="ps_monitoring_toggle" value="1" />';
+            echo '<input type="hidden" name="tool_key" value="' . esc_attr($tool['key']) . '" />';
+            $enabled = $tool_status[$tool['key']]['enabled'];
+            echo '<input type="hidden" name="tool_state" value="' . ($enabled ? 'off' : 'on') . '" />';
+            $btn_label = $enabled ? __('Deaktivieren', 'postindexer') : __('Aktivieren', 'postindexer');
+            $btn_class = $enabled ? 'button-secondary' : 'button button-primary';
+            echo '<button type="submit" class="' . esc_attr($btn_class) . '">' . esc_html($btn_label) . '</button>';
+            echo '<span class="tool-state-label ' . esc_attr($tool_status[$tool['key']]['status_class']) . '">';
+            echo $enabled ? __('Aktiv', 'postindexer') : __('Inaktiv', 'postindexer');
+            if (!empty($tool_status[$tool['key']]['badge'])) {
+                echo ' · ' . sprintf(__('Meldungen: %s', 'postindexer'), esc_html($tool_status[$tool['key']]['badge']));
+            }
+            echo '</span>';
+            echo '</form>';
+            echo '</div>';
             echo '</div>';
             
             echo '<div class="tab-body">';

@@ -96,6 +96,12 @@ PERMALINK", 'contentmon' );
 		$bad_words       = get_site_option( 'content_monitor_bad_words' );
 		$bad_words_array = explode( ",", $bad_words );
 		$bad_words_array = array_map( 'trim', $bad_words_array );
+		$bad_words_array = array_filter( $bad_words_array ); // Filtere leere Strings
+
+		// Wenn keine Badwords definiert sind, skip monitoring
+		if ( empty( $bad_words_array ) ) {
+			return false;
+		}
 
 		//get post content words array
 		$post_content = $post->post_title . ' ' . $post->post_content;
@@ -145,6 +151,13 @@ PERMALINK", 'contentmon' );
 	public function comment_monitor( $commentdata ) {
 		$bad_words = get_site_option( 'content_monitor_bad_words' );
 		$bad_words_array = array_map( 'trim', explode( ',', $bad_words ) );
+		$bad_words_array = array_filter( $bad_words_array ); // Filtere leere Strings
+
+		// Wenn keine Badwords definiert sind, skip monitoring
+		if ( empty( $bad_words_array ) ) {
+			return $commentdata;
+		}
+
 		$replace_word = get_site_option( 'content_monitor_replace_word', 'PIEPS' );
 		$bad_word_found = false;
 		$original_content = $commentdata['comment_content'];
@@ -357,6 +370,10 @@ PERMALINK", 'contentmon' );
 				$badword_log = get_site_option( 'content_monitor_log', array() );
 			}
 		}
+
+		// Aktiver Tab und Counter setzen
+		$active_tab = isset($_GET['content_monitor_tab']) ? sanitize_key($_GET['content_monitor_tab']) : 'meldungen';
+		$counter = is_array($badword_log) ? count($badword_log) : 0;
 		// AJAX-Tabumschaltung
 		?>
 		<script>
