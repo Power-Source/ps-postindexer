@@ -744,7 +744,7 @@ class UserReports {
 
 		if ( $content_types && count( $content_types ) ) {
 			?>
-			<label for="user-reports-filter-types"><?php _e( 'Berichtstyp', 'postindexer' ); ?></label>:
+			<label for="user-reports-filter-types"><?php _e( 'Berichtstyp:', 'postindexer' ); ?></label>
 			<select id="user-reports-filter-types" name="type">
 				<?php
 
@@ -827,7 +827,7 @@ class UserReports {
 			}
 
 			?>
-			<label for="user-reports-filter-blogs"><?php _e( 'Blogs', 'postindexer' ); ?></label>:
+			<label for="user-reports-filter-blogs"><?php _e( 'Blogs:', 'postindexer' ); ?></label>
 			<select id="user-reports-filter-blogs" name="blog_id">
 				<?php
 				foreach ( $blogs as $blog_id => $blog_name ) {

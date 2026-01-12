@@ -232,19 +232,33 @@ if ( ! class_exists( 'Reports_Data_Source' ) ) {
          * @param int $limit Limit für Top Blogs
          * @return array Array mit blog_id Keys und post_count Values
          */
-        public function get_posts_by_blog( $limit = 15 ) {
+        /**
+         * Hole alle Posts für einen Blog aus dem Index
+         * 
+         * @param int $blog_id WordPress Blog/Site ID
+         * @param int $limit Limit für Ergebnisse
+         * @param string $post_type Post Type (default 'post')
+         * @return array Array von Post Objects
+         */
+        public function get_posts_by_blog( $blog_id, $limit = 9999, $post_type = 'post' ) {
             if ( ! $this->model ) {
                 return array();
             }
 
-            $results = $this->model->get_summary_blog_totals();
-            
-            $data = array();
-            foreach ( $results as $row ) {
-                $data[ $row->BLOG_ID ] = intval( $row->blog_count );
-            }
+            $sql = $this->db->prepare(
+                "SELECT * FROM {$this->model->network_posts}
+                 WHERE blog_id = %d
+                 AND post_type = %s
+                 AND post_status = 'publish'
+                 ORDER BY post_modified_gmt DESC
+                 LIMIT %d",
+                $blog_id,
+                $post_type,
+                $limit
+            );
 
-            return $data;
+            $results = $this->db->get_results( $sql );
+            return ! empty( $results ) ? $results : array();
         }
 
         /**

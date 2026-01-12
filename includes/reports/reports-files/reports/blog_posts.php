@@ -21,14 +21,22 @@ if (
 }
 
 function report_blog_posts_ouput(){
-	global $wpdb, $current_site;
+	global $wpdb, $current_site, $activity_reports;
 
 	$action = isset( $_GET[ 'report-action' ] ) ? $_GET[ 'report-action' ] : '';
 	switch( $action ) {
 		//---------------------------------------------------//
 		default:
 			// Hole indexierte Blogs aus Data Source
+			if (!$activity_reports || !is_object($activity_reports)) {
+				echo '<div class="notice notice-error"><p>' . esc_html__('Reports-Module nicht initialisiert.', 'postindexer') . '</p></div>';
+				return;
+			}
 			$data_source = $activity_reports->get_data_source();
+			if (!$data_source || !is_object($data_source)) {
+				echo '<div class="notice notice-error"><p>' . esc_html__('Data Source nicht verfügbar.', 'postindexer') . '</p></div>';
+				return;
+			}
 			$indexed_blogs = $data_source->get_indexed_blogs();
 			?>
 			<form name="report" method="POST" action="?page=reports&action=view-report&report=blog-posts&report-action=view">
@@ -97,11 +105,52 @@ function report_blog_posts_ouput(){
 				//=======================================//
 				// Nutze die neue Data Source aus dem Plugin-Core
 				$data_source = $activity_reports->get_data_source();
+				if (!$data_source || !is_object($data_source)) {
+					echo '<div class="notice notice-error"><p>' . esc_html__('Data Source nicht verfügbar.', 'postindexer') . '</p></div>';
+					break;
+				}
 				$total_days = $period;
 				$date_format = get_option('date_format');
 
 				// Hole Daten direkt aus dem indexierten Post Index
 				$counts_by_date = $data_source->get_blog_posts_by_date( $blog_id, $period, 'post' );
+
+				// === ZUSAMMENFASSUNG ===
+				$total_new_posts = array_sum( $counts_by_date );
+				
+				// DEBUG: Zeige Datenbeschaffung
+				$debug_info = '';
+				if ( empty($counts_by_date) ) {
+					$debug_info = '<div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 12px; color: #856404;">';
+					$debug_info .= '<strong>' . esc_html__('ℹ️ Debug-Info:', 'postindexer') . '</strong><br>';
+					$debug_info .= esc_html__('Es wurden keine Posts gefunden. Mögliche Ursachen:', 'postindexer') . '<br>';
+					$debug_info .= '1. ' . esc_html__('Der Post-Index wurde noch nicht aktualisiert', 'postindexer') . '<br>';
+					$debug_info .= '2. ' . esc_html__('Blog ID: ' . intval($blog_id) . ' hat keine Posts im Index', 'postindexer') . '<br>';
+					$debug_info .= '3. ' . esc_html__('Neue Posts werden nach dem Speichern indexiert', 'postindexer');
+					$debug_info .= '</div>';
+				}
+				
+				echo '<div style="background: #f8f9fa; border-left: 4px solid #0073aa; padding: 20px; margin: 20px 0; border-radius: 4px;">';
+				echo '<h3 style="margin-top: 0; color: #0073aa;">' . esc_html__('Bericht: Blog Posts', 'postindexer') . '</h3>';
+				echo '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+				
+				echo '<div>';
+				echo '<div style="font-size: 28px; font-weight: bold; color: #0073aa;">' . intval($total_new_posts) . '</div>';
+				echo '<div style="color: #666; font-size: 13px;">' . esc_html__('neue/bearbeitete Posts in den letzten ' . intval($period) . ' Tagen', 'postindexer') . '</div>';
+				echo '</div>';
+				
+				if ( !empty($counts_by_date) ) {
+					$latest_day = max( array_keys($counts_by_date) );
+					$latest_count = $counts_by_date[$latest_day];
+					echo '<div>';
+					echo '<div style="font-size: 28px; font-weight: bold; color: #28a745;">' . intval($latest_count) . '</div>';
+					echo '<div style="color: #666; font-size: 13px;">' . esc_html__('Posts am neuesten Datum (' . date_i18n('d. M Y', strtotime($latest_day)) . ')', 'postindexer') . '</div>';
+					echo '</div>';
+				}
+				
+				echo '</div>';
+				echo $debug_info;
+				echo '</div>';
 
 				$report_data = array();
 				$days = 0;
@@ -134,54 +183,63 @@ function report_blog_posts_ouput(){
 						$highest_value = $value;
 					}
 				}
-				//=======================================//
-				$g = new graph();
-				//------------------------------//
-				//---Data-----------------------//
-				//------------------------------//
-				$g->set_data( $array_values );
+				
+				// === GRAPH ===
+				if ( !empty($array_values) && $highest_value > 0 ) {
+					echo '<div style="background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 4px; margin-top: 20px;">';
+					echo '<h4>' . esc_html__('Grafik: Posts über Zeit', 'postindexer') . '</h4>';
+					
+					$g = new graph();
+					//------------------------------//
+					//---Data-----------------------//
+					//------------------------------//
+					$g->set_data( $array_values );
 
-				//------------------------------//
-				//---X--------------------------//
-				//------------------------------//
-				$g->set_x_labels( $array_labels );
-				//------------------------------//
-				//---Y--------------------------//
-				//------------------------------//
-				$g->set_y_min( 0 );
-				$g->set_y_max( $highest_value );
-				//------------------------------//
-				$g->set_num_decimals ( 0 );
-				$g->set_is_decimal_separator_comma( false );
-				$g->set_is_thousand_separator_disabled( true );
-				$g->y_axis_colour = '#ffffff';
-				$g->x_axis_colour = '#596171';
-				$g->x_grid_colour = $g->y_grid_colour = '#E0E1E4';
+					//------------------------------//
+					//---X--------------------------//
+					//------------------------------//
+					$g->set_x_labels( $array_labels );
+					//------------------------------//
+					//---Y--------------------------//
+					//------------------------------//
+					$g->set_y_min( 0 );
+					$g->set_y_max( $highest_value );
+					//------------------------------//
+					$g->set_num_decimals ( 0 );
+					$g->set_is_decimal_separator_comma( false );
+					$g->set_is_thousand_separator_disabled( true );
+					$g->y_axis_colour = '#ffffff';
+					$g->x_axis_colour = '#596171';
+					$g->x_grid_colour = $g->y_grid_colour = '#E0E1E4';
 
-				// approx 5 x labels on the graph
-				$steps = ceil($label_count / 5);
-				$steps = $steps + $steps % 2; // make sure modulo 2
+					// approx 5 x labels on the graph
+					$steps = ceil($label_count / 5);
+					$steps = $steps + $steps % 2; // make sure modulo 2
 
-				$g->set_x_label_style( 10, $g->x_axis_colour, 0, $steps, $g->x_grid_colour );
-				$g->set_x_axis_steps( $steps / 2 );
+					$g->set_x_label_style( 10, $g->x_axis_colour, 0, $steps, $g->x_grid_colour );
+					$g->set_x_axis_steps( $steps / 2 );
 
 
-				$stepsY = ceil($highest_value / 4);
-				$g->y_label_steps( $stepsY / 3 );
-				$g->y_label_steps( 4 );
+					$stepsY = ceil($highest_value / 4);
+					$g->y_label_steps( $stepsY / 3 );
+					$g->y_label_steps( 4 );
 
-				$g->bg_colour = '#ffffff';
-				$g->set_inner_background('#ffffff');
-				$g->area_hollow( 1, 3, 4, '#3357A0', __( 'post(s)', 'reports' ), 10 );
+					$g->bg_colour = '#ffffff';
+					$g->set_inner_background('#ffffff');
+					$g->area_hollow( 1, 3, 4, '#3357A0', __( 'post(s)', 'reports' ), 10 );
 
-				$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
-				//------------------------------//
-				$g->set_width( '100%' );
-				$g->set_height( 250 );
-				$g->set_js_path ( REPORTS_PLUGIN_URL . 'report-graphs/open-flash-chart/js/' );
-				$g->set_swf_path ( REPORTS_PLUGIN_URL . 'report-graphs/open-flash-chart/' );
-				$g->set_output_type('js');
-				echo $g->render();
+					$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
+					//------------------------------//
+					$g->set_width( '100%' );
+					$g->set_height( 300 );
+					$g->set_js_path ( REPORTS_PLUGIN_URL . 'report-graphs/open-flash-chart/js/' );
+					$g->set_swf_path ( REPORTS_PLUGIN_URL . 'report-graphs/open-flash-chart/' );
+					$g->set_output_type('js');
+					echo $g->render();
+					echo '</div>';
+				} else {
+					echo '<div class="notice notice-info"><p>' . esc_html__('Keine Daten vorhanden für diesen Zeitraum.', 'postindexer') . '</p></div>';
+				}
 				//=======================================//
 			}
 		break;
