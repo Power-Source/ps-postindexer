@@ -4,7 +4,7 @@ Tags: multisite, suche, netzwerksuche
 Requires at least: 4.9
 Tested up to: 6.8.1
 ClassicPress: 2.6.0
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -45,6 +45,12 @@ Der PS Multisite Indexer vereint jetzt alle wichtigen Funktionen in einem einzig
 [POWERED BY PSOURCE](https://github.com/Power-Source/)
 
 == ChangeLog ==
+
+= 1.0.2 =
+
+* UI Verbesserungen
+* Monitoring Bugs gefixt
+* Textanpassungen
 
 = 1.0.1 =
 
