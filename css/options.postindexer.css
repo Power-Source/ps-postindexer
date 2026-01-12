@@ -223,3 +223,93 @@ div.postbox div.inside div.line {
   outline: none;
 }
 
+/* ————————————————
+	 Statistikseite: Top-Infobar + Responsive Grid
+	 ———————————————— */
+
+/* Top-Infobar Container */
+#postindexer-top-toolbar {
+	margin: 10px 0 16px;
+}
+
+/* Infobar Box Tweaks */
+#postindexer-top-toolbar .postbox { margin-top: 0; }
+
+/* Pep: Gradient-Hintergrund ähnlich Monitoring */
+.postindexer-toolbar .inside {
+	background: linear-gradient(90deg, #5b7df6 0%, #6a50c9 100%);
+	border-radius: 8px;
+	padding: 16px;
+	box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+/* Zwei Infos (Contenttypen, Meist indizierte Seiten) nebeneinander auf Desktop */
+/* Toolbar Layout */
+.postindexer-toolbar .pi-toolbar-row {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	justify-content: space-between;
+}
+.postindexer-toolbar .pi-item {
+	flex: 1 1 0;
+	padding: 8px 12px;
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: #fff;
+}
+.postindexer-toolbar .pi-title {
+	font-weight: 600;
+	color: #fff;
+	margin-bottom: 4px;
+}
+.postindexer-toolbar .pi-title .pi-icon {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	background-size: 16px 16px;
+	background-repeat: no-repeat;
+	margin-right: 6px;
+	vertical-align: -3px;
+}
+.postindexer-toolbar .pi-icon-types {
+	background-image: url(../docs/assets/icons/pie-graph-icon.png);
+}
+.postindexer-toolbar .pi-icon-sites {
+	background-image: url(../docs/assets/icons/bar-graph-icon.png);
+}
+.postindexer-toolbar .pi-desc {
+	color: rgba(255,255,255,0.95);
+}
+.postindexer-toolbar .pi-badge {
+	display: inline-block;
+	background: #fff;
+	color: #4b6ef3;
+	font-weight: 700;
+	border-radius: 9999px;
+	padding: 2px 10px;
+	margin-right: 8px;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.postindexer-toolbar .pi-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	gap: 18px;
+}
+.postindexer-toolbar .pi-list li a {
+	color: #fff;
+	text-decoration: none;
+}
+.postindexer-toolbar .pi-list li a:hover { text-decoration: underline; }
+
+/* Dashboard: 2 Spalten auf Desktop, 1 Spalte auf Mobil */
+@media (max-width: 782px) {
+	/* Spalten auf Mobil stapeln */
+	.metabox-holder#dashboard-widgets .postbox-container {
+		width: 100% !important;
+	}
+	/* Toolbar Inhalte stapeln */
+	.postindexer-toolbar .pi-toolbar-row { flex-direction: column; }

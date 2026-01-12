@@ -25,8 +25,8 @@ class Comment_Indexer_Admin {
         $parent_slug = 'ps-multisite-index';
         add_submenu_page(
             $parent_slug,
-            __('Comment Index', 'postindexer'),
-            __('Comment Index', 'postindexer'),
+            __('Kommentar Index', 'postindexer'),
+            __('Kommentar Index', 'postindexer'),
             'manage_network',
             'comment-index',
             [$this, 'render_page'],
@@ -41,11 +41,11 @@ class Comment_Indexer_Admin {
             echo '<div class="updated notice is-dismissible"><p>'.__('Einstellungen gespeichert.','postindexer').'</p></div>';
         }
         $active = (int)get_site_option($this->option_name, 0);
-        echo '<div class="wrap"><h1>'.esc_html__('Comment Index','postindexer').'</h1>';
+        echo '<div class="wrap"><h1>'.esc_html__('Kommentar Index','postindexer').'</h1>';
         echo '<form method="post" style="margin-bottom:2em;">';
         wp_nonce_field('comment_indexer_toggle_action','comment_indexer_toggle_nonce');
         echo '<label style="font-size:1.2em;font-weight:bold;display:flex;align-items:center;gap:1em;">';
-        echo '<span>'.__('Comment Indexer aktivieren','postindexer').'</span>';
+        echo '<span>'.__('Kommentar Indexer aktivieren','postindexer').'</span>';
         echo '<input type="hidden" name="comment_indexer_toggle" value="1">';
         echo '<span class="ps-switch">';
         echo '<input type="checkbox" name="comment_indexer_active" value="1" '.($active?'checked':'').' style="opacity:0;width:0;height:0;">';
@@ -60,7 +60,7 @@ class Comment_Indexer_Admin {
         if ($active) {
             $this->render_comments_table();
         } else {
-            echo '<div style="color:#888;font-size:1.1em;">'.__('Der Comment Indexer ist derzeit deaktiviert.','postindexer').'</div>';
+            echo '<div style="color:#888;font-size:1.1em;">'.__('Der Kommentar Indexer ist derzeit deaktiviert.','postindexer').'</div>';
         }
         echo '</div>';
     }

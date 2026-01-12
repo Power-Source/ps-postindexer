@@ -928,70 +928,57 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 
 			$plugin = get_plugin_data( WP_PLUGIN_DIR . '/ps-postindexer/post-indexer.php' );
 
+			// Daten für die Toolbar sammeln
+			$post_type_counts = $this->model->get_summary_post_types();
+			$blog_counts       = $this->model->get_summary_blog_totals();
+
+			// Text: „xy page, xy post, …“ inkl. Gesamtzahl
+			$types_summary = array();
+			$total_count   = 0;
+			if ( ! empty( $post_type_counts ) ) {
+				foreach ( $post_type_counts as $ptc ) {
+					$total_count     += (int) $ptc->post_type_count;
+					$types_summary[] = sprintf( '%d %s', (int) $ptc->post_type_count, __( $ptc->post_type, 'postindexer' ) );
+				}
+			}
+			$types_breakdown_text = implode( ', ', $types_summary );
+
+			// Top 3 Webseiten mit den meisten Indizierungen
+			$top_sites_text = '';
+			if ( ! empty( $blog_counts ) ) {
+				usort( $blog_counts, function ( $a, $b ) { return (int) $b->blog_count - (int) $a->blog_count; } );
+				$tops   = array_slice( $blog_counts, 0, 3 );
+				$parts  = array();
+				foreach ( $tops as $top ) {
+					$parts[] = array(
+						'name'  => get_blog_option( $top->BLOG_ID, 'blogname' ),
+						'count' => (int) $top->blog_count,
+						'url'   => get_blog_option( $top->BLOG_ID, 'home' )
+					);
+				}
+				$top_sites_text = $parts; // als Array weitergeben, unten gerendert
+			}
+
 			?>
-			<div id="post-indexer-summary" class="postbox ">
+			<div id="post-indexer-summary" class="postbox postindexer-toolbar">
 				<h3 class="hndle"><span><?php _e( 'Content Index Zusammenfassung', 'postindexer' ); ?></span></h3>
 				<div class="inside">
-
-					<div class="table table_content">
-						<p class="sub"><?php _e( 'Indizierte Contenttypen', 'postindexer' ); ?></p>
-						<?php
-						// Get the counts for the post types
-						$post_type_counts = $this->model->get_summary_post_types();
-						?>
-						<table id="post-indexer-indexed-post-types" class="widefat">
-							<tbody>
-							<?php
-							$trclass = 'alt';
-							foreach ( $post_type_counts as $ptc ) {
-								?>
-								<tr class="<?php echo $trclass; ?>">
-									<td class="first b b-posts"><?php echo $ptc->post_type_count; ?></td>
-									<td class="t posts"><?php echo __( $ptc->post_type, 'postindexer' ); ?></td>
-								</tr>
-								<?php
-								if ( $trclass == '' ) {
-									$trclass = 'alt';
-								} else {
-									$trclass = '';
-								}
-							}
-							?>
-							</tbody>
-						</table>
+					<div class="pi-toolbar-row">
+						<div class="pi-item pi-left">
+							<div class="pi-title"><span class="pi-icon pi-icon-types"></span><?php _e( 'PS Multisite Index Indizierungsstatus', 'postindexer' ); ?></div>
+							<div class="pi-desc"><span class="pi-badge"><?php echo number_format_i18n( $total_count ); ?></span> <?php echo esc_html( $types_breakdown_text ); ?></div>
+						</div>
+						<div class="pi-item pi-right">
+							<div class="pi-title"><span class="pi-icon pi-icon-sites"></span><?php _e( 'Meist indizierte Webseiten', 'postindexer' ); ?></div>
+							<div class="pi-desc">
+								<ul class="pi-list">
+									<?php if ( is_array( $top_sites_text ) ) { foreach ( $top_sites_text as $site ) { ?>
+										<li><a href="<?php echo esc_url( $site['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $site['name'] ); ?></a> (<?php echo number_format_i18n( $site['count'] ); ?>)</li>
+									<?php } } ?>
+								</ul>
+							</div>
+						</div>
 					</div>
-
-					<div class="table table_discussion">
-						<p class="sub"><?php _e( 'Meist indizierten Webseiten', 'postindexer' ); ?></p>
-						<?php
-						// Get the counts for the blogs
-						$blog_counts = $this->model->get_summary_blog_totals();
-						?>
-						<table id="post-indexer-most-indexed-sites" class="widefat">
-							<tbody>
-							<?php
-							$trclass = 'alt';
-							foreach ( $blog_counts as $bc ) {
-								?>
-								<tr class="<?php echo $trclass; ?>">
-									<td class="first b b-posts"><?php echo $bc->blog_count; ?></td>
-									<td class="t posts"><?php echo get_blog_option( $bc->BLOG_ID, 'blogname' ); ?></td>
-								</tr>
-								<?php
-								if ( $trclass == '' ) {
-									$trclass = 'alt';
-								} else {
-									$trclass = '';
-								}
-								//$trclass = '';
-							}
-							?>
-							</tbody>
-						</table>
-					</div>
-
-					<br class="clear">
-
 				</div>
 			</div>
 			<?php
@@ -1333,7 +1320,7 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 
 		function handle_statistics_page() {
 
-			add_action( 'postindexer_dashboard_left', array( $this, 'dashboard_news' ) );
+			// Die Content-Zusammenfassung wird als Top-Infobar separat gerendert
 			add_action( 'postindexer_dashboard_left', array( $this, 'dashboard_meta' ) );
 			add_action( 'postindexer_dashboard_left', array( $this, 'dashboard_blog_stats' ) );
 
@@ -1362,11 +1349,18 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 			}
 			?>
 
+			<?php
+			// Top-Infobar: Content Index Zusammenfassung
+			echo '<div id="postindexer-top-toolbar" class="postindexer-toolbar">';
+			$this->dashboard_news();
+			echo '</div>';
+			?>
+
 			<div id="dashboard-widgets-wrap">
 
 				<div class="metabox-holder" id="dashboard-widgets">
 					<div style="width: 49%;" class="postbox-container">
-						<div class="meta-box-sortables ui-sortable" id="normal-sortables">
+						<div id="normal-sortables">
 							<?php
 							do_action( 'postindexer_dashboard_left' );
 							?>
@@ -1374,20 +1368,10 @@ if ( ! class_exists( 'postindexeradmin' ) ) {
 					</div>
 
 					<div style="width: 49%;" class="postbox-container">
-						<div class="meta-box-sortables ui-sortable" id="side-sortables">
+						<div id="side-sortables">
 							<?php
 							do_action( 'postindexer_dashboard_right' );
 							?>
-						</div>
-					</div>
-
-					<div style="display: none; width: 49%;" class="postbox-container">
-						<div class="meta-box-sortables ui-sortable" id="column3-sortables" style="">
-						</div>
-					</div>
-
-					<div style="display: none; width: 49%;" class="postbox-container">
-						<div class="meta-box-sortables ui-sortable" id="column4-sortables" style="">
 						</div>
 					</div>
 				</div>

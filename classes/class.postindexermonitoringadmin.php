@@ -57,6 +57,13 @@ class Postindexer_Monitoring_Admin {
 
         // AJAX Toggle
         add_action('wp_ajax_ps_monitoring_toggle', [$this, 'ajax_toggle']);
+        
+        // Styles enqueue
+        add_action('admin_head', [$this, 'enqueue_styles']);
+    }
+    
+    public function enqueue_styles() {
+        wp_enqueue_style('content-monitor-styles', plugins_url('css/content-monitor.css', dirname(__FILE__)), [], '1.0.0');
     }
 
     private function get_tool_by_key($key) {

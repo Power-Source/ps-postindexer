@@ -377,7 +377,6 @@ PERMALINK", 'contentmon' );
 		// Aktiver Tab und Counter setzen
 		$active_tab = isset($_GET['content_monitor_tab']) ? sanitize_key($_GET['content_monitor_tab']) : 'meldungen';
 		$counter = is_array($badword_log) ? count($badword_log) : 0;
-		// AJAX-Tabumschaltung
 		?>
 		<script>
 		jQuery(document).ready(function($){
@@ -392,7 +391,6 @@ PERMALINK", 'contentmon' );
 				var tab = $(this).attr('href').split('content-monitor-tab-')[1];
 				showTab(tab);
 			});
-			// Standard: aktiven Tab anzeigen (Fallback: meldungen)
 			var activeTab = '<?php echo esc_js($active_tab); ?>';
 			if($('#content-monitor-tab-'+activeTab).length) {
 				showTab(activeTab);
@@ -400,72 +398,198 @@ PERMALINK", 'contentmon' );
 				showTab('meldungen');
 			}
 			
-			// AJAX Delete Handler
-			$(document).on('click', '.content-monitor-delete', function(e){
+			// ===== Ajax-Pagination für Meldungen =====
+			$(document).on('click', '.cm-page-btn', function(e){
 				e.preventDefault();
-				var $link = $(this);
-				var $row = $link.closest('tr');
-				var index = $link.data('index');
+				var page = $(this).data('page');
+				loadMeldungenPage(page);
+			});
+			
+			function loadMeldungenPage(page) {
+				$.ajax({
+					url: ajaxurl,
+					type: 'POST',
+					data: {
+						action: 'content_monitor_load_page',
+						page: page,
+						nonce: '<?php echo wp_create_nonce('content_monitor_load_page'); ?>'
+					},
+					dataType: 'json',
+					success: function(resp) {
+						if (resp && resp.success) {
+							$('#cm-badwords-tbody').html(resp.data.html);
+							// Update pagination buttons
+							$('.cm-page-btn').removeClass('button-primary').addClass('button');
+							$('.cm-page-btn[data-page="' + page + '"]').addClass('button-primary').removeClass('button');
+							// Reset selection
+							$('#cm-select-all').prop('checked', false);
+							$('#cm-bulk-toolbar').hide();
+						} else {
+							alert('<?php echo esc_js(__('Fehler beim Laden.', 'postindexer')); ?>');
+						}
+					},
+					error: function() {
+						alert('<?php echo esc_js(__('Fehler beim Laden.', 'postindexer')); ?>');
+					}
+				});
+			}
+			
+			// ===== Checkbox-Logik =====
+			$(document).on('change', '#cm-select-all', function(){
+				$('.cm-row-select').prop('checked', $(this).is(':checked'));
+				updateBulkToolbar();
+			});
+			
+			$(document).on('change', '.cm-row-select', function(){
+				updateBulkToolbar();
+				// Synch "Select All" Checkbox
+				var allCount = $('.cm-row-select').length;
+				var checkedCount = $('.cm-row-select:checked').length;
+				$('#cm-select-all').prop('checked', allCount > 0 && allCount === checkedCount);
+			});
+			
+			function updateBulkToolbar() {
+				var checkedCount = $('.cm-row-select:checked').length;
+				if (checkedCount > 0) {
+					$('#cm-bulk-toolbar').show();
+					$('#cm-selected-count').text(checkedCount + ' ' + '<?php echo esc_js(__('ausgewählt', 'postindexer')); ?>');
+				} else {
+					$('#cm-bulk-toolbar').hide();
+				}
+			}
+			
+			// ===== Suchfeld-Filterung =====
+			$(document).on('keyup', '#cm-search-input', function(){
+				var searchTerm = $(this).val().toLowerCase();
+				var visibleRows = 0;
+				var totalRows = 0;
 				
-				// Erste Klick: Bestätigung anzeigen
-				if (!$link.hasClass('confirm-delete')) {
-					$link.addClass('confirm-delete');
-					$link.html('✓ <?php echo esc_js(__('Löschen?', 'postindexer')); ?>');
-					$link.css({'background': '#dc3545', 'color': '#fff', 'padding': '4px 8px', 'border-radius': '3px', 'font-size': '11px'});
+				$('.cm-row').each(function(){
+					totalRows++;
+					var $row = $(this);
+					var text = $row.text().toLowerCase();
 					
-					// Zurücksetzen nach 3 Sekunden
+					if (searchTerm === '' || text.indexOf(searchTerm) !== -1) {
+						$row.show();
+						visibleRows++;
+					} else {
+						$row.hide();
+					}
+				});
+				
+				// Update info
+				if (searchTerm === '') {
+					$('#cm-search-results-info').text('');
+				} else {
+					$('#cm-search-results-info').text(visibleRows + ' ' + '<?php echo esc_js(__('gefunden', 'postindexer')); ?>');
+				}
+			});
+			
+			$(document).on('click', '#cm-cancel-selection', function(e){
+				e.preventDefault();
+				$('#cm-select-all').prop('checked', false);
+				$('.cm-row-select').prop('checked', false);
+				updateBulkToolbar();
+			});
+			
+			// ===== Bulk-Löschen =====
+			$(document).on('click', '#cm-bulk-delete', function(e){
+				e.preventDefault();
+				var indices = [];
+				$('.cm-row-select:checked').each(function(){
+					indices.push($(this).val());
+				});
+				if (indices.length === 0) {
+					alert('<?php echo esc_js(__('Keine Einträge ausgewählt.', 'postindexer')); ?>');
+					return;
+				}
+				if (!confirm('<?php echo esc_js(__('Wirklich löschen?', 'postindexer')); ?>')) return;
+				
+				$.ajax({
+					url: ajaxurl,
+					type: 'POST',
+					data: {
+						action: 'content_monitor_bulk_delete',
+						indices: indices,
+						nonce: '<?php echo wp_create_nonce('content_monitor_bulk_delete'); ?>'
+					},
+					dataType: 'json',
+					success: function(resp) {
+						if (resp && resp.success) {
+							// Remove rows
+							$.each(indices, function(i, idx){
+								$('.cm-row[data-index="' + idx + '"]').fadeOut(300, function(){
+									$(this).remove();
+								});
+							});
+							// Reset & reload
+							setTimeout(function(){
+								$('#cm-select-all').prop('checked', false);
+								$('#cm-bulk-toolbar').hide();
+								// Reload first page or current
+								loadMeldungenPage(1);
+							}, 400);
+						} else {
+							alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
+						}
+					},
+					error: function() {
+						alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
+					}
+				});
+			});
+			
+			// ===== Single-Delete (schnelle Variante) =====
+			$(document).on('click', '.cm-delete-btn', function(e){
+				e.preventDefault();
+				var $btn = $(this);
+				var $row = $btn.closest('.cm-row');
+				var index = $btn.data('index');
+				
+				// Toggle Bestätigungsmodus
+				if (!$btn.hasClass('cm-confirm')) {
+					$btn.addClass('cm-confirm');
+					$btn.text('✓');
 					setTimeout(function(){
-						if ($link.hasClass('confirm-delete')) {
-							$link.removeClass('confirm-delete');
-							$link.html('✕');
-							$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
+						if ($btn.hasClass('cm-confirm')) {
+							$btn.removeClass('cm-confirm');
+							$btn.text('✕');
 						}
 					}, 3000);
 					return;
 				}
 				
-				// Zweiter Klick: Tatsächlich löschen
 				$row.css('opacity', '0.5');
-				$link.css('pointer-events', 'none');
 				
-				$.post(ajaxurl, {
-					action: 'content_monitor_delete_entry',
-					index: index,
-					nonce: '<?php echo wp_create_nonce('content_monitor_delete'); ?>'
-				}, function(resp){
-					if (resp && resp.success) {
-						$row.fadeOut(300, function(){
-							$(this).remove();
-							// Update counter
-							var newCount = resp.data.new_count || 0;
-							$('.nav-tab .count').text(newCount);
-							// Update badge in monitoring tab if present
-							var $tabBadge = $('.ps-monitoring-tabs .tab-link[data-tool-key="content_monitor"] .tab-badge');
-							if (newCount > 0) {
-								if ($tabBadge.length) {
-									$tabBadge.text(newCount);
-								} else {
-									$('.ps-monitoring-tabs .tab-link[data-tool-key="content_monitor"]').append('<span class="tab-badge">' + newCount + '</span>');
-								}
-							} else {
-								$tabBadge.remove();
-							}
-						});
-					} else {
+				$.ajax({
+					url: ajaxurl,
+					type: 'POST',
+					data: {
+						action: 'content_monitor_delete_entry',
+						index: index,
+						nonce: '<?php echo wp_create_nonce('content_monitor_delete'); ?>'
+					},
+					dataType: 'json',
+					success: function(resp) {
+						if (resp && resp.success) {
+							$row.fadeOut(300, function(){
+								$(this).remove();
+								// Update counter
+								$('.nav-tab .count').text(resp.data.new_count || 0);
+							});
+						} else {
+							$row.css('opacity', '1');
+							$btn.removeClass('cm-confirm');
+							$btn.text('✕');
+							alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
+						}
+					},
+					error: function() {
 						$row.css('opacity', '1');
-						$link.css('pointer-events', 'auto');
-						$link.removeClass('confirm-delete');
-						$link.html('✕');
-						$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
+						$btn.removeClass('cm-confirm');
+						$btn.text('✕');
 						alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
 					}
-				}, 'json').fail(function(){
-					$row.css('opacity', '1');
-					$link.css('pointer-events', 'auto');
-					$link.removeClass('confirm-delete');
-					$link.html('✕');
-					$link.css({'background': '', 'color': 'red', 'padding': '', 'border-radius': '', 'font-size': ''});
-					alert('<?php echo esc_js(__('Fehler beim Löschen.', 'postindexer')); ?>');
 				});
 			});
 		});
@@ -478,35 +602,48 @@ PERMALINK", 'contentmon' );
 		echo '<div id="content-monitor-tab-meldungen" class="content-monitor-tab-content">';
 		if (!empty($badword_log)) {
 			echo '<h3>' . esc_html__('Gefundene Badwords', 'postindexer') . '</h3>';
-			echo '<table class="widefat"><thead><tr>';
-			echo '<th>' . esc_html__('Datum', 'postindexer') . '</th>';
-			echo '<th>' . esc_html__('Beitrag', 'postindexer') . '</th>';
-			echo '<th>' . esc_html__('User', 'postindexer') . '</th>';
-			echo '<th>' . esc_html__('E-Mail', 'postindexer') . '</th>';
-			echo '<th></th>';
-			echo '</tr></thead><tbody>';
+			// Suchfeld
+			echo '<div class="cm-search-box">';
+			echo '<input type="text" id="cm-search-input" placeholder="' . esc_attr__('Beitrag, User oder E-Mail durchsuchen...', 'postindexer') . '" class="regular-text" style="max-width:400px;">';
+			echo '<span id="cm-search-results-info" style="margin-left:12px; color:#666; font-size:12px;"></span>';
+			echo '</div>';
+			echo '<div id="cm-meldungen-container" class="cm-table-container" data-total="' . intval($log_total) . '" data-per-page="25">';
+			echo '<table class="widefat cm-badwords-table"><thead><tr>';
+			echo '<th class="cm-checkbox"><input type="checkbox" id="cm-select-all" title="' . esc_attr__('Alle auswählen', 'postindexer') . '"></th>';
+			echo '<th class="cm-col-date">' . esc_html__('Datum', 'postindexer') . '</th>';
+			echo '<th class="cm-col-post">' . esc_html__('Beitrag', 'postindexer') . '</th>';
+			echo '<th class="cm-col-user">' . esc_html__('User', 'postindexer') . '</th>';
+			echo '<th class="cm-col-email">' . esc_html__('E-Mail', 'postindexer') . '</th>';
+			echo '<th class="cm-col-action"></th>';
+			echo '</tr></thead><tbody id="cm-badwords-tbody">';
 			foreach ($log_slice as $idx => $entry) {
-				// Der Index muss auf den Original-Index gemappt werden, da array_slice auf das reversed Array angewendet wurde
 				$orig_idx = $log_total - 1 - ($log_start + $idx);
-				echo '<tr>';
-				echo '<td>' . esc_html($entry['found_at']) . '</td>';
-				echo '<td><a href="' . esc_url($entry['permalink']) . '" target="_blank">' . esc_html($entry['post_title']) . '</a></td>';
-				echo '<td>' . esc_html($entry['user_login']) . ' (ID: ' . intval($entry['user_id']) . ')</td>';
-				echo '<td>' . esc_html($entry['user_email']) . '</td>';
-				echo '<td><a href="#" class="content-monitor-delete" data-index="' . $orig_idx . '" style="color:red;font-weight:bold;text-decoration:none;" title="' . esc_attr__('Meldung löschen', 'postindexer') . '">✕</a></td>';
+				echo '<tr data-index="' . intval($orig_idx) . '" class="cm-row">';
+				echo '<td class="cm-checkbox"><input type="checkbox" class="cm-row-select" value="' . intval($orig_idx) . '"></td>';
+				echo '<td class="cm-col-date"><time datetime="' . esc_attr($entry['found_at']) . '">' . esc_html($entry['found_at']) . '</time></td>';
+				echo '<td class="cm-col-post"><a href="' . esc_url($entry['permalink']) . '" target="_blank" rel="noopener">' . esc_html($entry['post_title']) . ' <span class="dashicon">↗</span></a></td>';
+				echo '<td class="cm-col-user">' . esc_html($entry['user_login']) . ' <small>(ID: ' . intval($entry['user_id']) . ')</small></td>';
+				echo '<td class="cm-col-email"><a href="mailto:' . esc_attr($entry['user_email']) . '">' . esc_html($entry['user_email']) . '</a></td>';
+				echo '<td class="cm-col-action"><button type="button" class="cm-delete-btn" data-index="' . intval($orig_idx) . '" title="' . esc_attr__('Löschen', 'postindexer') . '">✕</button></td>';
 				echo '</tr>';
 			}
 			echo '</tbody></table>';
-			// --- Navigation ---
+			echo '</div>';
+			// Bulk-Aktion Toolbar (sticky)
+			echo '<div id="cm-bulk-toolbar" class="cm-bulk-toolbar">';
+			echo '<span id="cm-selected-count">0 ' . esc_html__('ausgewählt', 'postindexer') . '</span>';
+			echo ' <button type="button" id="cm-bulk-delete" class="button button-danger">' . esc_html__('Ausgewählte löschen', 'postindexer') . '</button>';
+			echo ' <button type="button" id="cm-cancel-selection" class="button">' . esc_html__('Abbrechen', 'postindexer') . '</button>';
+			echo '</div>';
+			// Pagination
 			if ($log_max_page > 1) {
-				echo '<div style="margin:12px 0;">' . __('Seite:', 'postindexer') . ' ';
+				echo '<div id="cm-pagination" class="cm-pagination" style="margin-top:16px; display:flex; gap:8px; align-items:center;">';
+				echo '<span>' . esc_html__('Seite:', 'postindexer') . ' </span>';
 				for ($i = 1; $i <= $log_max_page; $i++) {
-					if ($i == $log_page) {
-						echo '<span style="font-weight:bold;">['.$i.']</span> ';
-					} else {
-						echo '<a href="?page=content-monitor&content_monitor_tab=meldungen&log_page='.$i.'">'.$i.'</a> ';
-					}
+					$class = ($i == $log_page) ? 'button button-primary' : 'button';
+					echo '<button type="button" class="cm-page-btn ' . esc_attr($class) . '" data-page="' . intval($i) . '">' . intval($i) . '</button>';
 				}
+				echo '<span style="margin-left:auto; color:#666; font-size:12px;">' . sprintf(esc_html__('Gesamt: %d Einträge', 'postindexer'), $log_total) . '</span>';
 				echo '</div>';
 			}
 		} else {
@@ -609,5 +746,79 @@ PERMALINK", 'contentmon' );
 			'message' => __('Meldung gelöscht.', 'postindexer')
 		]);
 	}
+	
+	public function ajax_load_page() {
+		if (!current_user_can('manage_network_options')) {
+			wp_send_json_error(['message' => 'forbidden'], 403);
+		}
+		
+		check_ajax_referer('content_monitor_load_page', 'nonce');
+		
+		$page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
+		$badword_log = get_site_option('content_monitor_log', array());
+		$badword_log = is_array($badword_log) ? $badword_log : array();
+		
+		$log_per_page = 25;
+		$log_total = count($badword_log);
+		$log_start = ($page - 1) * $log_per_page;
+		$log_slice = array_slice(array_reverse($badword_log), $log_start, $log_per_page);
+		
+		$html = '';
+		foreach ($log_slice as $idx => $entry) {
+			$orig_idx = $log_total - 1 - ($log_start + $idx);
+			$html .= '<tr data-index="' . intval($orig_idx) . '" class="cm-row">';
+			$html .= '<td class="cm-checkbox"><input type="checkbox" class="cm-row-select" value="' . intval($orig_idx) . '"></td>';
+			$html .= '<td class="cm-col-date"><time datetime="' . esc_attr($entry['found_at']) . '">' . esc_html($entry['found_at']) . '</time></td>';
+			$html .= '<td class="cm-col-post"><a href="' . esc_url($entry['permalink']) . '" target="_blank" rel="noopener">' . esc_html($entry['post_title']) . ' <span class="dashicon">↗</span></a></td>';
+			$html .= '<td class="cm-col-user">' . esc_html($entry['user_login']) . ' <small>(ID: ' . intval($entry['user_id']) . ')</small></td>';
+			$html .= '<td class="cm-col-email"><a href="mailto:' . esc_attr($entry['user_email']) . '">' . esc_html($entry['user_email']) . '</a></td>';
+			$html .= '<td class="cm-col-action"><button type="button" class="cm-delete-btn" data-index="' . intval($orig_idx) . '" title="' . esc_attr__('Löschen', 'postindexer') . '">✕</button></td>';
+			$html .= '</tr>';
+		}
+		
+		wp_send_json_success(['html' => $html]);
+	}
+	
+	public function ajax_bulk_delete() {
+		if (!current_user_can('manage_network_options')) {
+			wp_send_json_error(['message' => 'forbidden'], 403);
+		}
+		
+		check_ajax_referer('content_monitor_bulk_delete', 'nonce');
+		
+		$indices = isset($_POST['indices']) ? array_map('intval', $_POST['indices']) : array();
+		if (empty($indices)) {
+			wp_send_json_error(['message' => 'no_indices']);
+		}
+		
+		$badword_log = get_site_option('content_monitor_log', array());
+		
+		// Sortiere indices absteigend, damit die Löschung nicht zu Indexverschiebungen führt
+		rsort($indices);
+		foreach ($indices as $idx) {
+			if (isset($badword_log[$idx])) {
+				unset($badword_log[$idx]);
+			}
+		}
+		$badword_log = array_values($badword_log);
+		update_site_option('content_monitor_log', $badword_log);
+		
+		wp_send_json_success([
+			'new_count' => count($badword_log),
+			'message' => sprintf(__('%d Meldung(en) gelöscht.', 'postindexer'), count($indices))
+		]);
+	}
 }
+
+// Registriere AJAX Handler
+add_action('wp_ajax_content_monitor_load_page', function() {
+	$obj = new Content_Monitor();
+	$obj->ajax_load_page();
+});
+
+add_action('wp_ajax_content_monitor_bulk_delete', function() {
+	$obj = new Content_Monitor();
+	$obj->ajax_bulk_delete();
+});
+
 new Content_Monitor();

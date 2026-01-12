@@ -1,7 +1,7 @@
 <?php
 
 if( !is_multisite() )
-	exit( __( 'Das Blog-Aktivitäts-Plugin funktioniert nur mit WordPress Multisite.', 'postindexer' ) );
+	exit( __( 'Das Blog-Aktivitäts-Plugin funktioniert nur mit Multisite.', 'postindexer' ) );
 
 /**
  * Plugin main class
