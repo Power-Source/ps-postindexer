@@ -9,8 +9,8 @@ title: Multisite Index Erweiterungen
 
 <div class="menu">
   <a href="index.html" style="color:#38c2bb;">📖 Multisite Index</a> 
-  <a href="https://github.com/Power-Source/ps-postindexer/discussions" style="color:#38c2bb;">💬 Forum</a> 
-  <a href="https://github.com/Power-Source/ps-postindexer/releases" style="color:#38c2bb;">📝 Download</a>
+  <a href="https://psource.eimen.net//ps-postindexer/discussions" style="color:#38c2bb;">💬 Forum</a> 
+  <a href="https://psource.eimen.net//ps-postindexer/releases" style="color:#38c2bb;">📝 Download</a>
 </div>
 
 ## Multisite Index lässt sich mit weiteren Plugins erweitern. Dadurch bildet dieses Plugin einen mächtigen Kern auf dem Du viele weitere Netzwerkweite Funktionen aufsetzen kannst!

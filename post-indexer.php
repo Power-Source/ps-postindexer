@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: Multisite Index
-Plugin URI: https://power-source.github.io/ps-postindexer/
+Plugin URI: https://psource.eimen.net/wiki/multisite-index-dokumentation/
 Description: Ein mächtiges Multisite-Index Plugin - Bringe deinen Content dahin wo du ihn brauchst und überwache ihn im ganzen Netzwerk!
 Author: PSOURCE
-Version: 1.0.2
-Author URI: https://github.com/Power-Source
+Version: 1.0.3
+Author URI: https://psource.eimen.net/
 Requires at least: 4.9
 Network: true
 Text Domain: postindexer

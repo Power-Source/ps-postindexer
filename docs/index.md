@@ -8,7 +8,7 @@ title: "PS Multisite Index – Die zentrale Lösung für Dein Netzwerk"
 <h2 align="center" style="color:#38c2bb;">🚀 PS Multisite Index – Die zentrale Lösung für Dein Netzwerk</h2>
 
 <div class="menu">
-  <a href="https://github.com/Power-Source/ps-postindexer/releases" style="color:#38c2bb;">📝 Download</a>
+  <a href="https://psource.eimen.net//ps-postindexer/releases" style="color:#38c2bb;">📝 Download</a>
   <a href="erweiterungen.html" style="color:#38c2bb;">📖 Erweiterungen</a>
 </div>
 
@@ -109,4 +109,4 @@ Dank der offenen Architektur und der integrierten Extensions ist der PS Multisit
 
 ---
 
-> ❤️ Entwickelt mit Liebe von [PSOURCE](https://github.com/Power-Source)
+> ❤️ Entwickelt mit Liebe von [PSOURCE](https://psource.eimen.net/)
