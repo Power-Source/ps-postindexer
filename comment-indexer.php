@@ -272,7 +272,7 @@ function comment_indexer_public_update(){
         return;
     }
 	global $wpdb;
-	if ( $_GET['updated'] == 'true' ) {
+	if ( isset( $_GET['updated'] ) && $_GET['updated'] === 'true' ) {
 		//$wpdb->query("UPDATE " . $wpdb->base_prefix . "site_comments SET blog_public = '" . get_blog_status( $wpdb->blogid, 'public') . "' WHERE blog_id = '" . $wpdb->blogid . "' AND site_id = '" . $wpdb->siteid . "'");
 		$wpdb->update($wpdb->base_prefix . "site_comments",
 			array(

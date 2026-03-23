@@ -349,19 +349,12 @@ add_action('init', function() {
     if (isset($_GET['gss_ajax']) && $_GET['gss_ajax'] == '1' && !empty($_GET['phrase'])) {
         global $wpdb;
         $phrase = trim(stripslashes($_GET['phrase']));
-        $limit = get_site_option('global_site_search_per_page', 10);
+		$page = isset($_GET['page']) ? max(1, absint($_GET['page'])) : 1;
+		$limit = 5;
         $post_type = get_site_option('global_site_search_post_type', 'post');
-        $where = $wpdb->prepare("post_title LIKE %s AND post_type = %s AND post_status = 'publish'", '%' . $wpdb->esc_like($phrase) . '%', $post_type);
-        $results = $wpdb->get_results("SELECT * FROM {$wpdb->base_prefix}network_posts WHERE $where ORDER BY post_date DESC LIMIT $limit");
-        if ($results) {
-            echo '<ul class="gss-ajax-list">';
-            foreach ($results as $row) {
-                echo '<li><a href="' . esc_url($row->guid) . '">' . esc_html($row->post_title) . '</a></li>';
-            }
-            echo '</ul>';
-        } else {
-            echo '<div style="color:#888;">Keine Treffer gefunden.</div>';
-        }
+		$prepared = global_site_search_prepare_ajax_query( $phrase, $post_type, $limit, $page );
+		$results = ! empty( $prepared['query'] ) ? $wpdb->get_results( $prepared['query'] ) : array();
+		echo global_site_search_render_ajax_results( $results, $phrase, $page, $limit, __( 'Keine Treffer gefunden.', 'postindexer' ) );
         exit;
     }
 });
@@ -371,21 +364,12 @@ add_action('init', function() {
     if (isset($_GET['gss_widget_ajax']) && $_GET['gss_widget_ajax'] == '1' && !empty($_GET['phrase'])) {
         global $wpdb;
         $phrase = trim(stripslashes($_GET['phrase']));
+		$page = isset($_GET['page']) ? max(1, absint($_GET['page'])) : 1;
         $limit = 5;
         $post_type = get_site_option('global_site_search_post_type', 'post');
-        $where = $wpdb->prepare("post_title LIKE %s AND post_type = %s AND post_status = 'publish'", '%' . $wpdb->esc_like($phrase) . '%', $post_type);
-        $results = $wpdb->get_results("SELECT * FROM {$wpdb->base_prefix}network_posts WHERE $where ORDER BY post_date DESC LIMIT $limit");
-        if ($results) {
-            echo '<ul class="gss-widget-results">';
-            foreach ($results as $row) {
-                echo '<li><a href="' . esc_url($row->guid) . '">' . esc_html($row->post_title) . '</a></li>';
-            }
-            echo '</ul>';
-            $main_site_url = network_home_url( global_site_search_get_search_base() . '/' . urlencode($phrase) . '/' );
-            echo '<div style="margin-top:0.7em;"><a href="' . esc_url($main_site_url) . '" style="font-weight:bold;">' . esc_html__('Weitere Treffer anzeigen', 'postindexer') . '</a></div>';
-        } else {
-            echo '<div style="margin-top:0.7em;color:#888;">' . esc_html__('Keine Treffer gefunden.', 'postindexer') . '</div>';
-        }
+		$prepared = global_site_search_prepare_ajax_query( $phrase, $post_type, $limit, $page );
+		$results = ! empty( $prepared['query'] ) ? $wpdb->get_results( $prepared['query'] ) : array();
+		echo global_site_search_render_ajax_results( $results, $phrase, $page, $limit, __( 'Keine Treffer gefunden.', 'postindexer' ) );
         exit;
     }
 });

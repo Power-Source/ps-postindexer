@@ -38,36 +38,85 @@ class Global_Site_Search_Widget extends WP_Widget {
 		if ($phrase !== '') {
 			$limit = 5;
 			$post_type = get_site_option('global_site_search_post_type', 'post');
-			$where = $wpdb->prepare("post_title LIKE %s AND post_type = %s AND post_status = 'publish'", '%' . $wpdb->esc_like($phrase) . '%', $post_type);
-			$results = $wpdb->get_results("SELECT * FROM {$wpdb->base_prefix}network_posts WHERE $where ORDER BY post_date DESC LIMIT $limit");
-			if ($results) {
-				echo '<ul class="gss-widget-results">';
-				foreach ($results as $row) {
-					echo '<li><a href="' . esc_url($row->guid) . '">' . esc_html($row->post_title) . '</a></li>';
-				}
-				echo '</ul>';
-				$main_site_url = network_home_url( global_site_search_get_search_base() . '/' . urlencode($phrase) . '/' );
-				echo '<div style="margin-top:0.7em;"><a href="' . esc_url($main_site_url) . '" style="font-weight:bold;">' . esc_html__('Weitere Treffer anzeigen', 'postindexer') . '</a></div>';
-			} else {
-				echo '<div style="margin-top:0.7em;color:#888;">' . esc_html__('Keine Treffer gefunden.', 'postindexer') . '</div>';
-			}
+			$prepared = global_site_search_prepare_ajax_query( $phrase, $post_type, $limit, 1 );
+			$results = ! empty( $prepared['query'] ) ? $wpdb->get_results( $prepared['query'] ) : array();
+			echo global_site_search_render_ajax_results( $results, $phrase, 1, $limit, __( 'Keine Treffer gefunden.', 'postindexer' ) );
 		}
 		echo '</div>';
 		// AJAX-Handler für das Widget
 		echo '<script>document.addEventListener("DOMContentLoaded",function(){
             var form=document.getElementById("gss-widget-form-' . esc_attr($this->id) . '");
+			var input=form?form.querySelector("input[name=gss_widget_phrase]"):null;
             var results=document.getElementById("gss-widget-results-' . esc_attr($this->id) . '");
-            if(form){
-                form.addEventListener("submit",function(e){
-                    e.preventDefault();
-                    var phrase=form.querySelector("input[name=gss_widget_phrase]").value;
-                    if(!phrase) return;
-                    results.innerHTML=\'<div style="color:#888;">Suche läuft...</div>\';
-                    fetch(window.location.pathname+"?gss_widget_ajax=1&phrase="+encodeURIComponent(phrase))
-                        .then(r=>r.text())
-                        .then(html=>{results.innerHTML=html;});
-                });
-            }
+			var observer=null;
+			function bindObserver(){
+				if(observer){observer.disconnect();}
+				var button=results?results.querySelector(".gss-load-more"):null;
+				if(!button||!("IntersectionObserver" in window)){return;}
+				observer=new IntersectionObserver(function(entries){
+					entries.forEach(function(entry){
+						if(entry.isIntersecting){
+							observer.disconnect();
+							button.click();
+						}
+					});
+				},{rootMargin:"180px 0px"});
+				observer.observe(button);
+			}
+			function mergeResults(html){
+				var temp=document.createElement("div");
+				temp.innerHTML=html;
+				var incomingList=temp.querySelector(".gss-results-list");
+				var currentList=results.querySelector(".gss-results-list");
+				var currentMore=results.querySelector(".gss-results-more");
+				var incomingMore=temp.querySelector(".gss-results-more");
+				if(!currentList||!incomingList){
+					results.innerHTML=html;
+					bindObserver();
+					return;
+				}
+				while(incomingList.firstChild){
+					currentList.appendChild(incomingList.firstChild);
+				}
+				if(currentMore){currentMore.remove();}
+				if(incomingMore){results.appendChild(incomingMore);}
+				bindObserver();
+			}
+			function fetchResults(page,append){
+				if(!form||!input||!results){return;}
+				var phrase=input.value.trim();
+				if(!phrase){results.innerHTML="";return;}
+				if(!append){
+					results.innerHTML=\'<div class="gss-search-loading">Suche läuft...</div>\';
+				}
+				var params=new URLSearchParams();
+				params.set("gss_widget_ajax","1");
+				params.set("phrase",phrase);
+				params.set("page",String(page));
+				fetch(window.location.pathname+"?"+params.toString())
+					.then(function(r){return r.text();})
+					.then(function(html){
+						if(append){mergeResults(html);}else{results.innerHTML=html;bindObserver();}
+					});
+			}
+			if(form){
+				form.addEventListener("submit",function(e){
+					e.preventDefault();
+					fetchResults(1,false);
+				});
+			}
+			if(results){
+				results.addEventListener("click",function(e){
+					var button=e.target.closest(".gss-load-more");
+					if(!button){return;}
+					e.preventDefault();
+					if(button.disabled){return;}
+					button.disabled=true;
+					button.textContent="Lade mehr...";
+					fetchResults(parseInt(button.getAttribute("data-next-page")||"2",10),true);
+				});
+				bindObserver();
+			}
         });</script>';
 
 		echo $after_widget;
