@@ -46,6 +46,12 @@ Der PS Multisite Indexer vereint jetzt alle wichtigen Funktionen in einem einzig
 
 == ChangeLog ==
 
+= 1.0.3 =
+
+* Globale Suche mehr Suchmaschine UIX
+* Diverse Fehlerbehebungen
+* Verbesserte Kompatibilität mit PS Blobverzeichnis
+
 = 1.0.2 =
 
 * UI Verbesserungen
