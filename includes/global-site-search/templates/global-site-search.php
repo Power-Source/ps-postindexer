@@ -30,7 +30,7 @@
 			<tr>
 				<td width="10%">&nbsp;</td>
 				<td style="text-align: center;" width="90%">
-					<strong><?php 'postindexer' ) ?></strong>
+					<strong><?php esc_html_e( 'Suchergebnisse', 'postindexer' ); ?></strong>
 				</td>
 			</tr>
 			<?php $tic_toc = 'toc'; ?>
@@ -38,7 +38,7 @@
 			<?php while ( network_have_posts() ) : network_the_post(); ?>
 				<?php $author_id = network_get_the_author_id(); ?>
 				<?php $the_author = get_user_by( 'id', $author_id ); ?>
-				<?php $post_author_display_name = $the_author ? $the_author->display_name : 'postindexer' ); ?>
+				<?php $post_author_display_name = $the_author ? $the_author->display_name : __( 'Unbekannt', 'postindexer' ); ?>
 				<tr>
 					<td>
 						<a href="<?php echo network_get_permalink() ?>"><?php echo get_avatar( $author_id, 32 ) ?></a>
@@ -49,16 +49,16 @@
 								<a href="http://<?php echo $current_site->domain . $current_site->path . $members_directory_base . '/' . $the_author->user_nicename ?>/">
 									<?php echo $post_author_display_name ?>
 								</a>
-								<?php 'postindexer' ) ?>:
+								<?php esc_html_e( 'schrieb', 'postindexer' ); ?>:
 							</strong>
 						<?php else : ?>
-							<strong><?php echo $post_author_display_name ?> <?php 'postindexer' ) ?>:</strong>
+							<strong><?php echo $post_author_display_name ?> <?php esc_html_e( 'schrieb', 'postindexer' ); ?>:</strong>
 						<?php endif; ?>
 						<a href="<?php echo network_get_permalink() ?>">
 							<strong><?php network_the_title() ?></strong>
 						</a><br>
 						<?php $the_content = preg_replace( "~(?:\[/?)[^/\]]+/?\]~s", '', network_get_the_content() ); ?>
-						<?php echo $substr( strip_tags( $the_content ), 0, 250 ) ?> (<a href="<?php echo network_get_permalink() ?>"><?php 'postindexer' ) ?></a>)
+						<?php echo $substr( strip_tags( $the_content ), 0, 250 ) ?> (<a href="<?php echo network_get_permalink() ?>"><?php esc_html_e( 'weiterlesen', 'postindexer' ); ?></a>)
 					</td>
 				</tr>
 			<?php endwhile; ?>
@@ -66,5 +66,5 @@
 	</div>
 	<div class="gssnav"><?php echo global_site_search_get_pagination() ?></div>
 <?php elseif ( isset($network_query_posts) && $network_query_posts ) : ?>
-	<p style="text-align:center"><?php 'postindexer' ) ?></p>
+	<p style="text-align:center"><?php esc_html_e( 'Keine Ergebnisse gefunden.', 'postindexer' ); ?></p>
 <?php endif; ?>

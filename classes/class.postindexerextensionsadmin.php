@@ -812,7 +812,10 @@ document.addEventListener('DOMContentLoaded', function() {
         foreach ($this->extensions as $key => $ext) {
             if (!isset($settings[$key]['scope'])) $settings[$key]['scope'] = 'main';
             if (!isset($settings[$key]['sites'])) $settings[$key]['sites'] = [];
-            if (!isset($settings[$key]['active'])) $settings[$key]['active'] = 0; // Standard: inaktiv
+            if (!isset($settings[$key]['active'])) {
+                // Legacy-Verhalten beibehalten: Das globale Posts-Widget war auf der Hauptseite standardmäßig verfügbar.
+                $settings[$key]['active'] = ($key === 'recent_global_posts_widget') ? 1 : 0;
+            }
         }
         return $settings;
     }

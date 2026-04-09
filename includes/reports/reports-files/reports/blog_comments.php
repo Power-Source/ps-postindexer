@@ -11,7 +11,11 @@ if( ! defined( 'REPORTS_PLUGIN_URL' ) )
 global $activity_reports;
 if (!isset($activity_reports) || !is_object($activity_reports)) return;
 
-$activity_reports->add_report( 'postindexer' ), 'blog-comments', 'postindexer' ) );
+$activity_reports->add_report(
+	__( 'Blog Comments', 'postindexer' ),
+	'blog-comments',
+	__( 'Comments for a selected blog.', 'postindexer' )
+);
 
 if (
     (isset($_GET['report']) && $_GET['report'] === 'blog-comments') ||
@@ -43,42 +47,42 @@ function report_blog_comments_ouput(){
 				<table class="form-table">
 					<?php if ( is_multisite() ) { ?>
 					<tr valign="top">
-						<th scope="row"><?php 'postindexer' ) ?></th>
+						<th scope="row"><?php esc_html_e( 'Blog', 'postindexer' ); ?></th>
 						<td>
 							<select name="blog_ID" id="blog_ID" style="width: 95%">
-								<option value=""><?php 'postindexer' ); ?></option>
+								<option value=""><?php esc_html_e( 'Bitte waehle einen Blog', 'postindexer' ); ?></option>
 								<?php foreach ( $indexed_blogs as $blog ) : 
 									$blog_details = get_blog_details( $blog->blog_id, false );
 									if ( $blog_details ) :
 								?>
 									<option value="<?php echo esc_attr( $blog->blog_id ); ?>">
 										<?php echo esc_html( $blog_details->blogname ); ?> 
-										(ID: <?php echo $blog->blog_id; ?>, <?php printf( 'postindexer' ), $blog->post_count ); ?>)
+										(ID: <?php echo (int) $blog->blog_id; ?>, <?php printf( esc_html__( '%d indexierte Inhalte', 'postindexer' ), $blog->post_count ); ?>)
 									</option>
 								<?php 
 									endif;
 								endforeach; ?>
 							</select>
 							<br />
-							<small><?php 'postindexer' ); ?></small>
+							<small><?php esc_html_e( 'Es werden nur Blogs mit indexierten Inhalten angezeigt.', 'postindexer' ); ?></small>
 						</td>
 					</tr>
 					<?php } else { ?>
 						<input type="hidden" name="blog_ID" id="blog_ID" value="0" />
 					<?php } ?>
 					<tr valign="top">
-						<th scope="row"><?php 'postindexer' ) ?></th>
+						<th scope="row"><?php esc_html_e( 'Zeitraum', 'postindexer' ); ?></th>
 						<td>
 							<select name="period" id="period">
-								<option value="15" ><?php 'postindexer' ); ?></option>
-								<option value="30" ><?php 'postindexer' ); ?></option>
-								<option value="45" ><?php 'postindexer' ); ?></option>
+								<option value="15" ><?php esc_html_e( '15 Tage', 'postindexer' ); ?></option>
+								<option value="30" ><?php esc_html_e( '30 Tage', 'postindexer' ); ?></option>
+								<option value="45" ><?php esc_html_e( '45 Tage', 'postindexer' ); ?></option>
 							</select>
 						</td>
 					</tr>
 				</table>
 				<p class="submit">
-					<input type="submit" name="Submit" class="button-primary" value="<?php 'postindexer' ) ?>" />
+					<input type="submit" name="Submit" class="button-primary" value="<?php echo esc_attr__( 'Anzeigen', 'postindexer' ); ?>" />
 				</p>
 			</form>
 			<?php
@@ -90,15 +94,15 @@ function report_blog_comments_ouput(){
 			$blog = is_multisite() ? get_blog_details( $blog_id, false ) : true;
 			if ( ! $blog ) {
 				?>
-                <p><?php 'postindexer' ); ?></p>
+				<p><?php esc_html_e( 'Blog nicht gefunden.', 'postindexer' ); ?></p>
                 <?php
 			}
 			if ( $blog ) {
 				?>
                 <p>
                     <ul>
-                        <li><strong><?php 'postindexer' ); ?></strong>: <?php echo $blog_id; ?> (<?php echo get_site_url( $blog_id ); ?>)</li>
-                        <li><strong><?php 'postindexer' ); ?></strong>: <?php printf( 'postindexer' ), $period ); ?></li>
+						<li><strong><?php esc_html_e( 'Blog', 'postindexer' ); ?></strong>: <?php echo (int) $blog_id; ?> (<?php echo esc_url( get_site_url( $blog_id ) ); ?>)</li>
+						<li><strong><?php esc_html_e( 'Zeitraum', 'postindexer' ); ?></strong>: <?php printf( esc_html__( '%d Tage', 'postindexer' ), $period ); ?></li>
                     </ul>
                 </p>
                 <?php
@@ -213,7 +217,7 @@ function report_blog_comments_ouput(){
 
 					$g->bg_colour = '#ffffff';
 					$g->set_inner_background('#ffffff');
-					$g->area_hollow( 1, 3, 4, '#3357A0', 'postindexer' ), 10 );
+					$g->area_hollow( 1, 3, '#3357A0', 10, __( 'Kommentare', 'postindexer' ) );
 
 					$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
 					//------------------------------//
@@ -263,7 +267,7 @@ function report_blog_comments_ouput(){
 
 				$g->bg_colour = '#ffffff';
 				$g->set_inner_background('#ffffff');
-				$g->area_hollow( 1, 3, 4, '#3357A0', 'postindexer' ), 10 );
+				$g->area_hollow( 1, 3, '#3357A0', 10, __( 'Kommentare', 'postindexer' ) );
 
 				$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
 				//------------------------------//

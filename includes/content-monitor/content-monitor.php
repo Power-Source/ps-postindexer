@@ -2,7 +2,7 @@
 
 //force multisite
 if ( ! is_multisite() ) {
-	die( 'postindexer' ) );
+	die( 'postindexer' );
 }
 
 class Content_Monitor {
@@ -28,12 +28,12 @@ class Content_Monitor {
 	public function send_email( $post_permalink, $post_type ) {
 		global $current_site;
 
-		$subject_content = 'postindexer' );
+		$subject_content = __( 'Content Monitor warning on SITE_NAME', 'postindexer' );
 
 		$message_content = __( "Dear EMAIL,
 
 The following TYPE on SITE_NAME has been flagged as possibly containing a non-allowed word:
-PERMALINK", 'contentmon' );
+PERMALINK", 'postindexer' );
 
 		$send_to_email = get_site_option( 'content_monitor_email' );
 		if ( $send_to_email == '' ) {
