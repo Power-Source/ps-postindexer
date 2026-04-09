@@ -32,11 +32,11 @@ if ( !defined( 'RECENT_GLOBAL_POSTS_FEED_WIDGET_MAIN_BLOG_ONLY' ) ) {
 class widget_recent_global_posts_feed extends WP_Widget {
 
 	function widget_recent_global_posts_feed() {
-		load_plugin_textdomain( 'rpgpfwidgets', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+		load_plugin_textdomain( 'postindexer', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
 
-		$widget_ops = array( 'classname' => 'rgpwidget', 'description' => __( 'Recent Global Posts Feed', 'rpgpfwidgets' ) );
+		$widget_ops = array( 'classname' => 'rgpwidget', 'description' => __( 'Neuester Netzwerkbeitraege-Feed', 'postindexer' ) );
 		$control_ops = array( 'id_base' => 'rpgpfwidget' );
-		$this->WP_Widget( 'rpgpfwidget', __( 'Recent Global Posts Feed', 'rpgpfwidgets' ), $widget_ops, $control_ops );
+		$this->WP_Widget( 'rpgpfwidget', __( 'Neuester Netzwerkbeitraege-Feed', 'postindexer' ), $widget_ops, $control_ops );
 	}
 
 	function widget( $args, $instance ) {
@@ -98,20 +98,20 @@ class widget_recent_global_posts_feed extends WP_Widget {
 
 		?><div>
 			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedtitle' ) ?>"><?php _e( 'Title', 'rpgpfwidgets' ) ?>:</label>
+				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedtitle' ) ?>"><?php _e( 'Titel', 'postindexer' ) ?>:</label>
 				<input class="widefat" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedtitle' ); ?>" name="<?php echo $this->get_field_name( 'recentglobalpostsfeedtitle' ) ?>" value="<?php echo esc_attr( stripslashes( $instance['recentglobalpostsfeedtitle'] ) ) ?>" type="text">
 			</p>
 
 			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedrssimage' ) ?>"><?php _e( 'RSS Image', 'rpgpfwidgets' ) ?>:</label>
+				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedrssimage' ) ?>"><?php _e( 'RSS-Bild', 'postindexer' ) ?>:</label>
 				<select name="<?php echo $this->get_field_name( 'recentglobalpostsfeedrssimage' ) ?>" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedrssimage' ) ?>" class="widefat">
-					<option value="show"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'show' ) ?>><?php _e( 'Show', 'rpgpfwidgets' ) ?></option>
-					<option value="hide"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'hide' ) ?>><?php _e( 'Hide', 'rpgpfwidgets' ) ?></option>
+					<option value="show"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'show' ) ?>><?php _e( 'Anzeigen', 'postindexer' ) ?></option>
+					<option value="hide"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'hide' ) ?>><?php _e( 'Verbergen', 'postindexer' ) ?></option>
 				</select>
 			</p>
 
 			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedpoststype' ) ?>"><?php _e( 'Post type', 'rpgpfwidgets' ) ?>:</label>
+				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedpoststype' ) ?>"><?php _e( 'Beitragstyp', 'postindexer' ) ?>:</label>
 				<input class="widefat" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedpoststype' ) ?>" name="<?php echo $this->get_field_name( 'recentglobalpostsfeedpoststype' ) ?>" value="<?php echo esc_attr( stripslashes( $instance['recentglobalpostsfeedpoststype'] ) ) ?>" type="text">
 			</p>
 

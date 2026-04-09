@@ -6,16 +6,52 @@ if ( !defined( 'RECENT_GLOBAL_POSTS_WIDGET_MAIN_BLOG_ONLY' ) ) {
 }
 
 
+if ( !function_exists( 'rgpwidget_is_extension_enabled_for_site' ) ) :
+	/**
+	 * Returns whether the widget extension is enabled for the current site.
+	 *
+	 * Uses the admin class if available and falls back to raw site options.
+	 *
+	 * @param int|null $site_id Site ID. Current site when null.
+	 * @return bool
+	 */
+	function rgpwidget_is_extension_enabled_for_site( $site_id = null ) {
+		if ( !$site_id ) {
+			$site_id = get_current_blog_id();
+		}
+
+		global $postindexer_extensions_admin;
+		if ( isset( $postindexer_extensions_admin ) && method_exists( $postindexer_extensions_admin, 'is_extension_active_for_site' ) ) {
+			return (bool) $postindexer_extensions_admin->is_extension_active_for_site( 'recent_global_posts_widget', $site_id );
+		}
+
+		$settings = get_site_option( 'postindexer_extensions_settings', array() );
+		$ext = isset( $settings['recent_global_posts_widget'] ) ? $settings['recent_global_posts_widget'] : array();
+		$active = isset( $ext['active'] ) ? (int) $ext['active'] : 0;
+		$scope = isset( $ext['scope'] ) ? (string) $ext['scope'] : 'main';
+		$sites = isset( $ext['sites'] ) && is_array( $ext['sites'] ) ? array_map( 'intval', $ext['sites'] ) : array();
+		$main_site = function_exists( 'get_main_site_id' ) ? (int) get_main_site_id() : 1;
+
+		if ( !$active ) {
+			return false;
+		}
+		if ( 'network' === $scope ) {
+			return true;
+		}
+		if ( 'main' === $scope ) {
+			return (int) $site_id === $main_site;
+		}
+		if ( 'sites' === $scope ) {
+			return in_array( (int) $site_id, $sites, true );
+		}
+
+		return false;
+	}
+endif;
+
 // Integration als Erweiterung für den Beitragsindexer
 add_action('plugins_loaded', function() {
-	if ( !class_exists('Postindexer_Extensions_Admin') ) return;
-	global $postindexer_extensions_admin;
-	if ( !isset($postindexer_extensions_admin) ) {
-		if ( isset($GLOBALS['postindexeradmin']) && isset($GLOBALS['postindexeradmin']->extensions_admin) ) {
-			$postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-		}
-	}
-	if ( isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('recent_global_posts_widget') ) {
+	if ( rgpwidget_is_extension_enabled_for_site() ) {
 		add_action( 'widgets_init', 'rgpwidget_register_widget', 11 );
 	}
 });
@@ -68,6 +104,7 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 	const DISPLAY_TITLE_BLOG         = 'title_blog';
 	const DISPLAY_CONTENT            = 'content';
 	const DISPLAY_BLOG_CONTENT       = 'blog_content';
+	const TEXT_DOMAIN                = 'postindexer';
 
 	/**
 	 * Constructor.
@@ -81,14 +118,14 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 	public function __construct( $widget_options = array(), $control_options = array() ) {
 		$widget_options = array_merge( array(
 			'classname'   => 'rgpwidget',
-			'description' => __( 'Recent Global Posts', 'rgpwidget' ),
+			'description' => __( 'Neueste Netzwerkbeitraege', self::TEXT_DOMAIN ),
 			), $widget_options );
 
 		$control_options = array_merge( array(
 			'id_base' => 'rgpwidget',
 			), $control_options );
 
-		parent::__construct( 'rgpwidget', __( 'Recent Global Posts', 'rgpwidget' ), $widget_options, $control_options );
+		parent::__construct( 'rgpwidget', __( 'Neueste Netzwerkbeitraege', self::TEXT_DOMAIN ), $widget_options, $control_options );
 	}
 
 	/**
@@ -103,26 +140,53 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		global $network_query;
 
 		$substr = function_exists( 'mb_substr' ) ? 'mb_substr' : 'substr';
-		extract( array_merge( array(
-			'recentglobalpostsdisplay'           => '',
-			'recentglobalpostsnumber'            => '',
-			'recentglobalpoststitlecharacters'   => '',
-			'recentglobalpostscontentcharacters' => '',
-			'recentglobalpostsavatars'           => '',
-			'recentglobalpostsavatarsize'        => '',
-			'exclude_blogs'                      => '',
-		), $instance ) );
+		$strlen = function_exists( 'mb_strlen' ) ? 'mb_strlen' : 'strlen';
 
-		$title = !empty( $instance['recentglobalpoststitle'] ) ? $instance['recentglobalpoststitle'] : __( 'Recent Global Posts' );
+		$instance = wp_parse_args( (array) $instance, array(
+			'recentglobalpoststitle'             => '',
+			'recentglobalpostsdisplay'           => self::DISPLAY_TITLE_CONTENT,
+			'recentglobalpostsnumber'            => 10,
+			'recentglobalpoststitlecharacters'   => 30,
+			'recentglobalpostscontentcharacters' => 100,
+			'recentglobalpostsavatars'           => 'hide',
+			'recentglobalpostsavatarsize'        => 32,
+			'recentglobalpoststype'              => 'post',
+			'exclude_blogs'                      => '',
+		) );
+
+		$recentglobalpostsdisplay = (string) $instance['recentglobalpostsdisplay'];
+		$recentglobalpostsnumber = absint( $instance['recentglobalpostsnumber'] );
+		$recentglobalpoststitlecharacters = absint( $instance['recentglobalpoststitlecharacters'] );
+		$recentglobalpostscontentcharacters = absint( $instance['recentglobalpostscontentcharacters'] );
+		$recentglobalpostsavatars = (string) $instance['recentglobalpostsavatars'];
+		$recentglobalpostsavatarsize = absint( $instance['recentglobalpostsavatarsize'] );
+		$recentglobalpoststype = !empty( $instance['recentglobalpoststype'] ) ? sanitize_key( $instance['recentglobalpoststype'] ) : 'post';
+
+		$title = !empty( $instance['recentglobalpoststitle'] ) ? $instance['recentglobalpoststitle'] : __( 'Neueste Netzwerkbeitraege', self::TEXT_DOMAIN );
 		$title = apply_filters( 'widget_title', $title, $instance, $this->id_base );
 
-		$recentglobalpoststype = !empty( $instance['recentglobalpoststype'] ) ? $instance['recentglobalpoststype'] : 'post';
-		$recentglobalpostsnumber = !empty( $instance['recentglobalpostsnumber'] ) ? absint( $instance['recentglobalpostsnumber'] ) : 10;
 		if ( !$recentglobalpostsnumber ) {
- 			$recentglobalpostsnumber = 10;
+	 		$recentglobalpostsnumber = 10;
+		}
+		if ( !$recentglobalpoststitlecharacters ) {
+			$recentglobalpoststitlecharacters = 30;
+		}
+		if ( !$recentglobalpostscontentcharacters ) {
+			$recentglobalpostscontentcharacters = 100;
+		}
+		if ( !$recentglobalpostsavatarsize ) {
+			$recentglobalpostsavatarsize = 32;
 		}
 
-		$exclude_blogs = array_filter( array_map( 'intval', explode( ',', $exclude_blogs ) ) );
+		$exclude_blogs = array_filter( array_map( 'intval', explode( ',', (string) $instance['exclude_blogs'] ) ) );
+
+		if ( !function_exists( 'network_query_posts' ) ) {
+			echo $args['before_widget'];
+			echo $args['before_title'], esc_html( $title ), $args['after_title'];
+			echo '<p>' . esc_html__( 'Der Beitragsindex steht gerade nicht zur Verfuegung.', self::TEXT_DOMAIN ) . '</p>';
+			echo $args['after_widget'];
+			return;
+		}
 
 		$network_query = network_query_posts( array(
 			'post_type'      => $recentglobalpoststype,
@@ -131,7 +195,7 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		) );
 
 		echo $args['before_widget'];
-			echo $args['before_title'], $title, $args['after_title'];
+			echo $args['before_title'], esc_html( $title ), $args['after_title'];
 			if ( network_have_posts() ) :
 				echo '<ul>';
 				while ( network_have_posts() ) :
@@ -143,45 +207,48 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 						$the_content = network_get_the_content();
 
 						if ( $recentglobalpostsavatars == 'show' ) :
-							echo '<a href="', $the_permalink, '">', get_avatar( network_get_the_author_id(), $recentglobalpostsavatarsize, '' ), '</a> ';
+								echo '<a href="', esc_url( $the_permalink ), '">', get_avatar( network_get_the_author_id(), $recentglobalpostsavatarsize, '' ), '</a> ';
 						endif;
 
 						$blog = get_blog_details( $post->BLOG_ID );
 						$blog_title = $blog ? $blog->blogname : '';
-						$title = $substr( $the_title, 0, $recentglobalpoststitlecharacters );
-						$content = $substr( strip_tags( $the_content ), 0, $recentglobalpostscontentcharacters );
+						$title = $substr( (string) $the_title, 0, $recentglobalpoststitlecharacters );
+						$content_text = wp_strip_all_tags( (string) $the_content );
+						$content = $substr( $content_text, 0, $recentglobalpostscontentcharacters );
 						switch ( $recentglobalpostsdisplay ) {
 							case self::DISPLAY_BLOG_CONTENT:
-								echo '<a href="', $the_permalink, '">', '[', $blog_title, ']</a>';
+								echo '<a href="', esc_url( $the_permalink ), '">', '[', esc_html( $blog_title ), ']</a>';
 								echo '<br>';
-								echo $content, $recentglobalpostscontentcharacters < strlen( $the_content ) ? '&hellip;' : '';
-								echo '<br><a href="', $the_permalink, '">', __( 'Read More', 'rgpwidget' ), ' &raquo;</a>';
+								echo esc_html( $content ), $recentglobalpostscontentcharacters < $strlen( $content_text ) ? '&hellip;' : '';
+								echo '<br><a href="', esc_url( $the_permalink ), '">', esc_html__( 'Weiterlesen', self::TEXT_DOMAIN ), ' &raquo;</a>';
 								break;
 							case self::DISPLAY_CONTENT:
-								echo $content, $recentglobalpostscontentcharacters < strlen( $the_content ) ? '&hellip;' : '';
-								echo '<br><a href="', $the_permalink, '">', __( 'Read More', 'rgpwidget' ), ' &raquo;</a>';
+								echo esc_html( $content ), $recentglobalpostscontentcharacters < $strlen( $content_text ) ? '&hellip;' : '';
+								echo '<br><a href="', esc_url( $the_permalink ), '">', esc_html__( 'Weiterlesen', self::TEXT_DOMAIN ), ' &raquo;</a>';
 								break;
 							case self::DISPLAY_TITLE:
-								echo '<a href="', $the_permalink, '">', $title, '</a>';
+								echo '<a href="', esc_url( $the_permalink ), '">', esc_html( $title ), '</a>';
 								break;
 							case self::DISPLAY_TITLE_BLOG:
-								echo '<a href="', $the_permalink, '">', $title, ' [', $blog_title, ']</a>';
+								echo '<a href="', esc_url( $the_permalink ), '">', esc_html( $title ), ' [', esc_html( $blog_title ), ']</a>';
 								break;
 							case self::DISPLAY_TITLE_BLOG_CONTENT:
-								echo '<a href="', $the_permalink, '">', $title, ' [', $blog_title, ']</a>';
+								echo '<a href="', esc_url( $the_permalink ), '">', esc_html( $title ), ' [', esc_html( $blog_title ), ']</a>';
 								echo '<br>';
-								echo $content;
+								echo esc_html( $content );
 								break;
 							case self::DISPLAY_TITLE_CONTENT:
 							default:
-								echo '<a href="', $the_permalink, '">', $title, '</a>';
+								echo '<a href="', esc_url( $the_permalink ), '">', esc_html( $title ), '</a>';
 								echo '<br>';
-								echo $content;
+								echo esc_html( $content );
 								break;
 						}
 					echo '</li>';
 				endwhile;
 				echo '</ul>';
+			else :
+				echo '<p>' . esc_html__( 'Keine Beitraege gefunden.', self::TEXT_DOMAIN ) . '</p>';
 			endif;
 		echo $args['after_widget'];
 	}
@@ -208,13 +275,25 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		) );
 
 		$displays = array(
-			self::DISPLAY_TITLE_CONTENT      => __( 'Title and content', 'rgpwidget' ),
-			self::DISPLAY_TITLE_BLOG_CONTENT => __( 'Title, blog name and content', 'rgpwidget' ),
-			self::DISPLAY_TITLE              => __( 'Title only', 'rgpwidget' ),
-			self::DISPLAY_TITLE_BLOG         => __( 'Title and blog name', 'rgpwidget' ),
-			self::DISPLAY_CONTENT            => __( 'Content only', 'rgpwidget' ),
-			self::DISPLAY_BLOG_CONTENT       => __( 'Blog name and content', 'rgpwidget' ),
+			self::DISPLAY_TITLE_CONTENT      => __( 'Titel und Inhalt', self::TEXT_DOMAIN ),
+			self::DISPLAY_TITLE_BLOG_CONTENT => __( 'Titel, Blogname und Inhalt', self::TEXT_DOMAIN ),
+			self::DISPLAY_TITLE              => __( 'Nur Titel', self::TEXT_DOMAIN ),
+			self::DISPLAY_TITLE_BLOG         => __( 'Titel und Blogname', self::TEXT_DOMAIN ),
+			self::DISPLAY_CONTENT            => __( 'Nur Inhalt', self::TEXT_DOMAIN ),
+			self::DISPLAY_BLOG_CONTENT       => __( 'Blogname und Inhalt', self::TEXT_DOMAIN ),
 		);
+
+		if ( empty( $instance['recentglobalpostsdisplay'] ) ) {
+			$instance['recentglobalpostsdisplay'] = self::DISPLAY_TITLE_CONTENT;
+		}
+
+		if ( empty( $instance['recentglobalpostsavatars'] ) ) {
+			$instance['recentglobalpostsavatars'] = 'hide';
+		}
+
+		if ( !absint( $instance['recentglobalpostsavatarsize'] ) ) {
+			$instance['recentglobalpostsavatarsize'] = 32;
+		}
 
 		if ( !absint( $instance['recentglobalpostsnumber'] ) ) {
 			$instance['recentglobalpostsnumber'] = 5;
@@ -229,12 +308,12 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		}
 
 		?><p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpoststitle' ) ?>"><?php _e( 'Title', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpoststitle' ) ?>"><?php _e( 'Titel', self::TEXT_DOMAIN ) ?>:</label>
 			<input type="text" id="<?php echo $this->get_field_id( 'recentglobalpoststitle' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpoststitle' ); ?>" value="<?php echo esc_attr( stripslashes( $instance['recentglobalpoststitle'] ) ) ?>">
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpostsdisplay' ) ?>"><?php _e( 'Display', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpostsdisplay' ) ?>"><?php _e( 'Anzeige', self::TEXT_DOMAIN ) ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpostsdisplay' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpostsdisplay' ) ?>">
 				<?php foreach ( $displays as $key => $label ) : ?>
 				<option value="<?php echo $key ?>"<?php selected( $key, $instance['recentglobalpostsdisplay'] ) ?>><?php echo $label ?></option>
@@ -243,7 +322,7 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpostsnumber' ) ?>"><?php _e( 'Number', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpostsnumber' ) ?>"><?php _e( 'Anzahl', self::TEXT_DOMAIN ) ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpostsnumber' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpostsnumber' ) ?>">
 				<?php for ( $counter = 1; $counter <= 25; $counter++ ) : ?>
 					<option value="<?php echo $counter ?>"<?php selected( $counter, $instance['recentglobalpostsnumber'] ) ?>><?php echo $counter ?></option>
@@ -252,7 +331,7 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpoststitlecharacters' ) ?>"><?php _e( 'Title Characters', 'rgpwidget' ); ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpoststitlecharacters' ) ?>"><?php _e( 'Titelzeichen', self::TEXT_DOMAIN ); ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpoststitlecharacters' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpoststitlecharacters' ) ?>">
 				<?php for ( $counter = 1; $counter <= 200; $counter++ ) : ?>
 					<option value="<?php echo $counter ?>"<?php selected( $counter, $instance['recentglobalpoststitlecharacters'] ) ?>><?php echo $counter ?></option>
@@ -261,7 +340,7 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpostscontentcharacters' ) ?>"><?php _e( 'Content Characters', 'rgpwidget' ); ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpostscontentcharacters' ) ?>"><?php _e( 'Inhaltszeichen', self::TEXT_DOMAIN ); ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpostscontentcharacters' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpostscontentcharacters' ) ?>">
 				<?php for ( $counter = 1; $counter <= 500; $counter++ ) : ?>
 					<option value="<?php echo $counter ?>"<?php selected( $counter, $instance['recentglobalpostscontentcharacters'] ) ?>><?php echo $counter ?></option>
@@ -270,15 +349,15 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpostsavatars' ) ?>"><?php _e( 'Avatars', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpostsavatars' ) ?>"><?php _e( 'Avatare', self::TEXT_DOMAIN ) ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpostsavatars' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpostsavatars' ) ?>">
-				<option value="show"<?php selected( $instance['recentglobalpostsavatars'], 'show' ) ?> ><?php _e( 'Show', 'rgpwidget' ) ?></option>
-				<option value="hide"<?php selected( $instance['recentglobalpostsavatars'], 'hide' ) ?> ><?php _e( 'Hide', 'rgpwidget' ) ?></option>
+				<option value="show"<?php selected( $instance['recentglobalpostsavatars'], 'show' ) ?> ><?php _e( 'Anzeigen', self::TEXT_DOMAIN ) ?></option>
+				<option value="hide"<?php selected( $instance['recentglobalpostsavatars'], 'hide' ) ?> ><?php _e( 'Verbergen', self::TEXT_DOMAIN ) ?></option>
 			</select>
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpostsavatarsize' ) ?>"><?php _e( 'Avatar Size', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpostsavatarsize' ) ?>"><?php _e( 'Avatar-Groesse', self::TEXT_DOMAIN ) ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpostsavatarsize' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpostsavatarsize' ) ?>">
 				<option value="16"<?php selected( $instance['recentglobalpostsavatarsize'], '16' ) ?>>16px</option>
 				<option value="32"<?php selected( $instance['recentglobalpostsavatarsize'], '32' ) ?>>32px</option>
@@ -289,22 +368,22 @@ class Recent_Global_Posts_Widget extends WP_Widget {
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'recentglobalpoststype' ) ?>"><?php _e( 'Post Type', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'recentglobalpoststype' ) ?>"><?php _e( 'Beitragstyp', self::TEXT_DOMAIN ) ?>:</label>
 			<select id="<?php echo $this->get_field_id( 'recentglobalpoststype' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'recentglobalpoststype' ) ?>">
 				<?php if ( !empty( $post_types ) ) : ?>
 					<?php foreach ( $post_types as $r ) : ?>
 						<option value="<?php echo $r ?>"<?php selected( $instance['recentglobalpoststype'], $r ) ?>><?php echo esc_html( $r ) ?></option>
 					<?php endforeach; ?>
 				<?php else : ?>
-					<option value="post"<?php selected( $instance['recentglobalpoststype'], 'post' ) ?>><?php _e( 'post' ) ?></option>
+					<option value="post"<?php selected( $instance['recentglobalpoststype'], 'post' ) ?>><?php _e( 'Beitrag', self::TEXT_DOMAIN ) ?></option>
 				<?php endif; ?>
 			</select>
 		</p>
 
 		<p>
-			<label for="<?php echo $this->get_field_id( 'exclude_blogs' ) ?>"><?php _e( 'Exclude Blogs', 'rgpwidget' ) ?>:</label>
+			<label for="<?php echo $this->get_field_id( 'exclude_blogs' ) ?>"><?php _e( 'Blogs ausschliessen', self::TEXT_DOMAIN ) ?>:</label>
 			<input type="text" id="<?php echo $this->get_field_id( 'exclude_blogs' ) ?>" class="widefat" name="<?php echo $this->get_field_name( 'exclude_blogs' ); ?>" value="<?php echo esc_attr( $instance['exclude_blogs'] ) ?>"><br>
-			<small><?php esc_html_e( 'Blog IDs, separated by commas.', 'rgpwidget' ) ?></small>
+			<small><?php esc_html_e( 'Blog-IDs, getrennt durch Kommas.', self::TEXT_DOMAIN ) ?></small>
 		</p>
 
 		<input type="hidden" name="<?php echo $this->get_field_name( 'recentglobalpostssubmit' ) ?>" value="1"><?php
