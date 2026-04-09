@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'POST_INDEXER_PLUGIN_DIR', plugin_dir_path( __FILE__) );
-// Erweiterung: Comment Form Text IMMER laden (Frontend & Backend)
+// Basis-Module
 require_once POST_INDEXER_PLUGIN_DIR . 'includes/comment-form-text/comment-form-text.php';
 
 require_once POST_INDEXER_PLUGIN_DIR . 'includes/config.php';
@@ -38,9 +38,8 @@ add_action('init', function() {
 // Widget-Loader für Neueste Netzwerk Beiträge (immer laden, aber Registrierung nach Scope)
 require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-posts-widget/widget-recent-global-posts.php';
 add_action('widgets_init', function() {
-    global $postindexer_extensions_admin;
-    if (isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('recent_global_posts_widget')) {
-        if (function_exists('rgpwidget_register_widget')) {
+    if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'recent_global_posts_widget' ) ) {
+        if ( function_exists( 'rgpwidget_register_widget' ) ) {
             rgpwidget_register_widget();
         }
     }
@@ -49,13 +48,26 @@ add_action('widgets_init', function() {
 // Widget-Loader für Global Comments Widget (immer laden, aber Registrierung nach Scope)
 require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-comments-widget/recent-global-comments-widget.php';
 add_action('widgets_init', function() {
-    global $postindexer_extensions_admin;
-    if (isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('recent_global_comments_widget')) {
-        if (function_exists('widget_recent_global_comments_init')) {
-            widget_recent_global_comments_init();
+    if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'recent_global_comments_widget' ) ) {
+        if ( function_exists( 'rgcwidget_register_widget' ) ) {
+            rgcwidget_register_widget();
         }
     }
 }, 21);
+
+// Recent Global Comments Feed Modul laden (Widget + Feed-Endpoint)
+require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-comments-feed/recent-global-comments-feed.php';
+
+// Recent Global Posts Feed Modul laden (Widget + Feed-Endpoint)
+require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-posts-feed/widget-recent-global-posts-feed.php';
+require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-posts-feed/recent-global-posts-feed.php';
+add_action('widgets_init', function() {
+    if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'recent_global_posts_feed' ) ) {
+        if ( function_exists( 'rgpfwidget_register_widget' ) ) {
+            rgpfwidget_register_widget();
+        }
+    }
+}, 22);
 
 // Include the database model we will be using across classes
 require_once POST_INDEXER_PLUGIN_DIR . 'classes/class.model.php';
@@ -86,9 +98,6 @@ if (is_multisite() && is_network_admin()) {
     require_once POST_INDEXER_PLUGIN_DIR . 'admin/class.commentindexeradmin.php';
     new Comment_Indexer_Admin();
 }
-
-// Erweiterung: Comment Form Text IMMER laden (Frontend & Backend)
-require_once POST_INDEXER_PLUGIN_DIR . 'includes/comment-form-text/comment-form-text.php';
 
 // Erweiterung: Recent Global Author Posts Feed IMMER laden
 require_once POST_INDEXER_PLUGIN_DIR . 'includes/recent-global-author-posts-feed/recent-global-author-posts-feed.php';

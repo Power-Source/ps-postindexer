@@ -5,6 +5,57 @@
  * Network functions based on existing ClassicPress functions but tweaked where required for network use
  */
 
+if ( ! function_exists( 'ps_postindexer_is_extension_enabled' ) ) {
+	/**
+	 * Check whether an extension is enabled for a site based on extension settings.
+	 *
+	 * Uses the extensions admin instance when available and falls back to the
+	 * persisted `postindexer_extensions_settings` site option.
+	 *
+	 * @param string   $extension_key Extension key from settings.
+	 * @param int|null $site_id       Site ID, defaults to current blog.
+	 * @return bool
+	 */
+	function ps_postindexer_is_extension_enabled( $extension_key, $site_id = null ) {
+		if ( empty( $extension_key ) ) {
+			return false;
+		}
+
+		if ( ! $site_id ) {
+			$site_id = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 1;
+		}
+
+		global $postindexer_extensions_admin;
+		if ( isset( $postindexer_extensions_admin ) && method_exists( $postindexer_extensions_admin, 'is_extension_active_for_site' ) ) {
+			return (bool) $postindexer_extensions_admin->is_extension_active_for_site( $extension_key, $site_id );
+		}
+
+		$settings = get_site_option( 'postindexer_extensions_settings', array() );
+		$ext = isset( $settings[ $extension_key ] ) && is_array( $settings[ $extension_key ] ) ? $settings[ $extension_key ] : array();
+
+		$active = isset( $ext['active'] ) ? (int) $ext['active'] : 0;
+		$scope = isset( $ext['scope'] ) ? (string) $ext['scope'] : 'main';
+		$sites = isset( $ext['sites'] ) && is_array( $ext['sites'] ) ? array_map( 'intval', $ext['sites'] ) : array();
+		$main_site = function_exists( 'get_main_site_id' ) ? (int) get_main_site_id() : 1;
+
+		if ( ! $active ) {
+			return false;
+		}
+
+		if ( 'network' === $scope ) {
+			return true;
+		}
+		if ( 'main' === $scope ) {
+			return (int) $site_id === $main_site;
+		}
+		if ( 'sites' === $scope ) {
+			return in_array( (int) $site_id, $sites, true );
+		}
+
+		return false;
+	}
+}
+
 function network_the_title($before = '', $after = '', $echo = true) {
 	$title = network_get_the_title();
 

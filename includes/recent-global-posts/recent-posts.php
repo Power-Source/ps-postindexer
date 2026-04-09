@@ -4,15 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Integration als Erweiterung für den Beitragsindexer
 add_action('plugins_loaded', function() {
-	if ( !class_exists('Postindexer_Extensions_Admin') ) return;
-	global $postindexer_extensions_admin;
-	if ( !isset($postindexer_extensions_admin) ) {
-		// Fallback: Instanz suchen (z.B. aus Mainklasse)
-		if ( isset($GLOBALS['postindexeradmin']) && isset($GLOBALS['postindexeradmin']->extensions_admin) ) {
-			$postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-		}
-	}
-	if ( isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('recent_network_posts') ) {
+	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'recent_network_posts' ) ) {
 		new Recent_Network_Posts();
 	}
 });

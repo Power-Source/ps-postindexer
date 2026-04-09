@@ -115,7 +115,7 @@
       <input type="text" name="phrase" id="gss-ajax-phrase" style="width:100%;box-sizing:border-box;min-height:48px;" value="<?php echo esc_attr( stripslashes( global_site_search_get_phrase() ) ) ?>">
     </div>
     <div class="gss-ajax-action" style="flex:0 0 160px;min-width:160px;">
-      <input type="submit" value="<?php _e( 'Suchen', 'globalsitesearch' ) ?>" style="display:block;width:100%;min-width:160px;min-height:48px;box-sizing:border-box;cursor:pointer;white-space:nowrap;">
+      <input type="submit" value="<?php 'postindexer' ) ?>" style="display:block;width:100%;min-width:160px;min-height:48px;box-sizing:border-box;cursor:pointer;white-space:nowrap;">
     </div>
   </div>
 </form>

@@ -16,19 +16,11 @@ class global_site_search {
 		global $wpdb;
 		$this->db = $wpdb;
 
-		if ( class_exists('Postindexer_Extensions_Admin') ) {
-			global $postindexer_extensions_admin;
-			if ( !isset($postindexer_extensions_admin) ) {
-				if ( isset($GLOBALS['postindexeradmin']) && isset($GLOBALS['postindexeradmin']->extensions_admin) ) {
-					$postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-				}
-			}
-			if ( isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('global_site_search') ) {
-				add_action( 'init', array( $this, 'global_site_search_page_setup' ) );
-				add_action( 'generate_rewrite_rules', array( $this, 'add_rewrite' ) );
-				add_filter( 'query_vars', array( $this, 'add_queryvars' ) );
-				add_filter( 'the_content', array( $this, 'global_site_search_output' ), 20 );
-			}
+		if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'global_site_search' ) ) {
+			add_action( 'init', array( $this, 'global_site_search_page_setup' ) );
+			add_action( 'generate_rewrite_rules', array( $this, 'add_rewrite' ) );
+			add_filter( 'query_vars', array( $this, 'add_queryvars' ) );
+			add_filter( 'the_content', array( $this, 'global_site_search_output' ), 20 );
 		}
 
 		add_action( 'wpmu_options', array( $this, 'global_site_search_site_admin_options' ) );
@@ -251,14 +243,7 @@ class global_site_search {
 
 // Integration als Erweiterung für den Beitragsindexer
 add_action('plugins_loaded', function() {
-	if ( !class_exists('Postindexer_Extensions_Admin') ) return;
-	global $postindexer_extensions_admin;
-	if ( !isset($postindexer_extensions_admin) ) {
-		if ( isset($GLOBALS['postindexeradmin']) && isset($GLOBALS['postindexeradmin']->extensions_admin) ) {
-			$postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-		}
-	}
-	if ( isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('global_site_search') ) {
+	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'global_site_search' ) ) {
 		// Hier die eigentliche Initialisierung der Such-Erweiterung
 		if (class_exists('Global_Site_Search')) {
 			new Global_Site_Search();

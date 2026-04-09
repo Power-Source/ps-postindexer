@@ -116,11 +116,4 @@ class widget_global_site_tags extends WP_Widget {
 
 }
 
-// Widget-Registrierung direkt nach der Klassendefinition
-if (
-    isset($postindexer_extensions_admin)
-    && $postindexer_extensions_admin->is_extension_active_for_site('global_site_tags')
-    && !is_network_admin()
-) {
-    register_widget('widget_global_site_tags');
-}
+// Registrierung erfolgt zentral in global-site-tags.php innerhalb von widgets_init.

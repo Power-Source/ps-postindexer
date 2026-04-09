@@ -79,7 +79,7 @@ class User_Activity {
 		if ( @is_file( ABSPATH . '/wp-admin/includes/upgrade.php' ) ) {
 			include_once ABSPATH . '/wp-admin/includes/upgrade.php';
 		} else {
-			die( __( "Unable to find 'wp-admin/upgrade-functions.php' and 'wp-admin/includes/upgrade.php'", 'user_activity' ) );
+			die( 'postindexer' ) );
 		}
 
 		$db_charset_collate = '';

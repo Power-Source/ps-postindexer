@@ -76,7 +76,7 @@ class Comment_Indexer_Admin {
         echo '<h2 style="margin-top:2em;">'.__('Letzte globale Kommentare','postindexer').'</h2>';
         echo '<table class="widefat striped" style="margin-top:1em;max-width:100%;">';
         echo '<thead><tr>';
-        echo '<th>'.__('ID').'</th><th>'.__('Blog').'</th><th>'.__('Autor').'</th><th>'.__('Inhalt').'</th><th>'.__('Datum').'</th><th>'.__('Status').'</th>';
+        echo '<th>' . __( 'ID', 'postindexer' ) . '</th><th>' . __( 'Blog', 'postindexer' ) . '</th><th>' . __( 'Autor', 'postindexer' ) . '</th><th>' . __( 'Inhalt', 'postindexer' ) . '</th><th>' . __( 'Datum', 'postindexer' ) . '</th><th>' . __( 'Status', 'postindexer' ) . '</th>';
         echo '</tr></thead><tbody>';
         if ($comments) {
             foreach ($comments as $c) {

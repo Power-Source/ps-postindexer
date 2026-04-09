@@ -242,7 +242,7 @@ class Activity_Reports {
 
 				?>
 				<style>.wrap h2:first-of-type { display: none; } .wrap > table { display: none !important; }</style>
-				<h2><?php _e( 'Reports', 'reports' ) ?></h2>
+				<h2><?php 'postindexer' ) ?></h2>
 				<?php
 				if ( count( $available_reports ) > 0 ) {
 					?>
@@ -261,7 +261,7 @@ class Activity_Reports {
 						echo "<tr class='" . $class . "'>";
 						echo "<td valign='top'>" . $available_report[0] . "</td>";
 						echo "<td valign='top'>" . $available_report[2] . "</td>";
-						echo "<td valign='top'><a href='?page=reports&action=view-report&report=" . $available_report[1] . "' rel='permalink' class='edit'>" . __( 'View Report', 'reports' ) . "</a></td>";
+						echo "<td valign='top'><a href='?page=reports&action=view-report&report=" . $available_report[1] . "' rel='permalink' class='edit'>" . 'postindexer' ) . "</a></td>";
 						echo "</tr>";
 						$class = ('alternate' == $class) ? '' : 'alternate';
 						//=========================================================//
@@ -272,7 +272,7 @@ class Activity_Reports {
 					<?php
 				} else {
 					?>
-						<p><?php _e( 'No reports available', 'reports' ) ?></p>
+						<p><?php 'postindexer' ) ?></p>
 					<?php
 				}
 			break;
@@ -285,7 +285,7 @@ class Activity_Reports {
 					}
 				}
 				?>
-				<h2><a href="?page=reports" style="text-decoration:none;"><?php _e( 'Reports', 'reports' ) ?></a> &raquo; <a href="?page=reports&action=view-report&report=<?php echo esc_attr($report_nicename); ?>" style="text-decoration:none;"><?php echo esc_html($report_name); ?></a></h2>
+				<h2><a href="?page=reports" style="text-decoration:none;"><?php 'postindexer' ) ?></a> &raquo; <a href="?page=reports&action=view-report&report=<?php echo esc_attr($report_nicename); ?>" style="text-decoration:none;"><?php echo esc_html($report_name); ?></a></h2>
 				<?php
 				do_action('view_report');
 			break;

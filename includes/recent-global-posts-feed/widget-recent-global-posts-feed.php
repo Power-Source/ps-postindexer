@@ -1,129 +1,152 @@
 <?php
-/*
-Plugin Name: Recent Posts Feed Icon Widget
-Description: Allows a link to the Global Posts Feed to be placed in the sidebar
-Author: PSOURCE
-Author URI: http://premium.wpmudev.org/
-Version: 3.1
-*/
 
-// +----------------------------------------------------------------------+
-// | Copyright Incsub (http://incsub.com/)                                |
-// +----------------------------------------------------------------------+
-// | This program is free software; you can redistribute it and/or modify |
-// | it under the terms of the GNU General Public License, version 2, as  |
-// | published by the Free Software Foundation.                           |
-// |                                                                      |
-// | This program is distributed in the hope that it will be useful,      |
-// | but WITHOUT ANY WARRANTY; without even the implied warranty of       |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        |
-// | GNU General Public License for more details.                         |
-// |                                                                      |
-// | You should have received a copy of the GNU General Public License    |
-// | along with this program; if not, write to the Free Software          |
-// | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,               |
-// | MA 02110-1301 USA                                                    |
-// +----------------------------------------------------------------------+
-
-if ( !defined( 'RECENT_GLOBAL_POSTS_FEED_WIDGET_MAIN_BLOG_ONLY' ) ) {
-	define( 'RECENT_GLOBAL_POSTS_FEED_WIDGET_MAIN_BLOG_ONLY', true );
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
-class widget_recent_global_posts_feed extends WP_Widget {
+class Recent_Global_Posts_Feed_Widget extends WP_Widget {
 
-	function widget_recent_global_posts_feed() {
-		load_plugin_textdomain( 'postindexer', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+	const NAME = __CLASS__;
+	const TEXT_DOMAIN = 'postindexer';
 
-		$widget_ops = array( 'classname' => 'rgpwidget', 'description' => __( 'Neuester Netzwerkbeitraege-Feed', 'postindexer' ) );
-		$control_ops = array( 'id_base' => 'rpgpfwidget' );
-		$this->WP_Widget( 'rpgpfwidget', __( 'Neuester Netzwerkbeitraege-Feed', 'postindexer' ), $widget_ops, $control_ops );
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		parent::__construct(
+			'recent_global_posts_feed_widget',
+			__( 'Neuester Netzwerkbeitraege-Feed', self::TEXT_DOMAIN ),
+			array(
+				'classname' => 'rgpwidget',
+				'description' => __( 'Zeigt einen Link zum globalen Beitrags-Feed an.', self::TEXT_DOMAIN ),
+			)
+		);
 	}
 
-	function widget( $args, $instance ) {
-		global $current_site;
-
-		extract( $args );
-
-		$defaults = array(
-			'recentglobalpostsfeedtitle'     => '',
-			'recentglobalpostsfeedrssimage'  => '',
-			'recentglobalpostsfeedpoststype' => 'post'
-		);
-
-		foreach ( array_keys( $defaults ) as $key ) {
-			if ( isset( $instance[$key] ) ) {
-				$defaults[$key] = $instance[$key];
-			}
+	/**
+	 * Render widget output.
+	 *
+	 * @param array $args Widget args.
+	 * @param array $instance Saved instance.
+	 */
+	public function widget( $args, $instance ) {
+		$instance = wp_parse_args( (array) $instance, self::get_default_instance() );
+		$title = apply_filters( 'widget_title', $instance['title'], $instance, $this->id_base );
+		$rss_image = ( 'hide' === $instance['rss_image'] ) ? 'hide' : 'show';
+		$post_type = sanitize_key( $instance['post_type'] );
+		if ( '' === $post_type ) {
+			$post_type = 'post';
 		}
 
-		extract( $defaults );
+		$feed_url = add_query_arg(
+			array(
+				'feed' => 'globalpostsfeed',
+				'posttype' => $post_type,
+			),
+			home_url( '/' )
+		);
 
-		$recentglobalpostsfeedtitle = apply_filters( 'widget_title', $recentglobalpostsfeedtitle );
-
-		echo $before_widget;
-			echo $before_title;
-				echo '<a href="http://', $current_site->domain, $current_site->path, 'feed/globalpostsfeed?posttype=', $recentglobalpostsfeedpoststype, '" >';
-					if ( $recentglobalpostsfeedrssimage != 'hide' ) {
-						echo '<img src="http://', $current_site->domain, $current_site->path, 'wp-includes/images/rss.png"> ';
-					}
-					echo esc_html( $recentglobalpostsfeedtitle );
-				echo '</a>';
-			echo $after_title;
-		echo $after_widget;
+		echo $args['before_widget'];
+		echo $args['before_title'];
+		echo '<a href="' . esc_url( $feed_url ) . '">';
+		if ( 'show' === $rss_image ) {
+			echo '<img src="' . esc_url( includes_url( 'images/rss.png' ) ) . '" alt="" /> ';
+		}
+		echo esc_html( $title );
+		echo '</a>';
+		echo $args['after_title'];
+		echo $args['after_widget'];
 	}
 
-	function update( $new_instance, $old_instance ) {
-		$defaults = array(
-			'recentglobalpostsfeedtitle'     => '',
-			'recentglobalpostsfeedrssimage'  => '',
-			'recentglobalpostsfeedpoststype' => 'post'
-		);
+	/**
+	 * Render widget settings form.
+	 *
+	 * @param array $instance Saved instance.
+	 */
+	public function form( $instance ) {
+		$instance = wp_parse_args( (array) $instance, self::get_default_instance() );
+		?>
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>"><?php esc_html_e( 'Titel', self::TEXT_DOMAIN ); ?>:</label>
+			<input class="widefat" id="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'title' ) ); ?>" value="<?php echo esc_attr( $instance['title'] ); ?>" type="text">
+		</p>
 
-		foreach ( $defaults as $key => $val ) {
-			$instance[$key] = $new_instance[$key];
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'rss_image' ) ); ?>"><?php esc_html_e( 'RSS-Bild', self::TEXT_DOMAIN ); ?>:</label>
+			<select id="<?php echo esc_attr( $this->get_field_id( 'rss_image' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'rss_image' ) ); ?>" class="widefat">
+				<option value="show" <?php selected( $instance['rss_image'], 'show' ); ?>><?php esc_html_e( 'Anzeigen', self::TEXT_DOMAIN ); ?></option>
+				<option value="hide" <?php selected( $instance['rss_image'], 'hide' ); ?>><?php esc_html_e( 'Verbergen', self::TEXT_DOMAIN ); ?></option>
+			</select>
+		</p>
+
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'post_type' ) ); ?>"><?php esc_html_e( 'Beitragstyp', self::TEXT_DOMAIN ); ?>:</label>
+			<input class="widefat" id="<?php echo esc_attr( $this->get_field_id( 'post_type' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'post_type' ) ); ?>" value="<?php echo esc_attr( $instance['post_type'] ); ?>" type="text">
+		</p>
+		<?php
+	}
+
+	/**
+	 * Sanitize and persist settings.
+	 *
+	 * @param array $new_instance New values.
+	 * @param array $old_instance Old values.
+	 * @return array
+	 */
+	public function update( $new_instance, $old_instance ) {
+		$instance = self::get_default_instance();
+		$instance['title'] = isset( $new_instance['title'] ) ? sanitize_text_field( $new_instance['title'] ) : $instance['title'];
+		$instance['rss_image'] = ( isset( $new_instance['rss_image'] ) && 'hide' === $new_instance['rss_image'] ) ? 'hide' : 'show';
+		$instance['post_type'] = isset( $new_instance['post_type'] ) ? sanitize_key( $new_instance['post_type'] ) : 'post';
+		if ( '' === $instance['post_type'] ) {
+			$instance['post_type'] = 'post';
 		}
-
 		return $instance;
 	}
 
-	function form( $instance ) {
+	/**
+	 * Default values with legacy option fallback.
+	 *
+	 * @return array
+	 */
+	private static function get_default_instance() {
 		$defaults = array(
-			'recentglobalpostsfeedtitle' => '',
-			'recentglobalpostsfeedrssimage' => '',
-			'recentglobalpostsfeedpoststype' => 'post'
+			'title' => __( 'Neuester Netzwerkbeitraege-Feed', self::TEXT_DOMAIN ),
+			'rss_image' => 'show',
+			'post_type' => 'post',
 		);
 
-		$instance = wp_parse_args( (array)$instance, $defaults );
-		extract( $instance );
+		$legacy = get_option( 'widget_recent_global_posts_feed', array() );
+		if ( is_array( $legacy ) ) {
+			if ( ! empty( $legacy['recentglobalpostsfeedtitle'] ) ) {
+				$defaults['title'] = sanitize_text_field( $legacy['recentglobalpostsfeedtitle'] );
+			}
+			if ( ! empty( $legacy['recentglobalpostsfeedrssimage'] ) ) {
+				$defaults['rss_image'] = ( 'hide' === $legacy['recentglobalpostsfeedrssimage'] ) ? 'hide' : 'show';
+			}
+			if ( ! empty( $legacy['recentglobalpostsfeedpoststype'] ) ) {
+				$defaults['post_type'] = sanitize_key( $legacy['recentglobalpostsfeedpoststype'] );
+			}
+		}
 
-		?><div>
-			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedtitle' ) ?>"><?php _e( 'Titel', 'postindexer' ) ?>:</label>
-				<input class="widefat" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedtitle' ); ?>" name="<?php echo $this->get_field_name( 'recentglobalpostsfeedtitle' ) ?>" value="<?php echo esc_attr( stripslashes( $instance['recentglobalpostsfeedtitle'] ) ) ?>" type="text">
-			</p>
-
-			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedrssimage' ) ?>"><?php _e( 'RSS-Bild', 'postindexer' ) ?>:</label>
-				<select name="<?php echo $this->get_field_name( 'recentglobalpostsfeedrssimage' ) ?>" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedrssimage' ) ?>" class="widefat">
-					<option value="show"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'show' ) ?>><?php _e( 'Anzeigen', 'postindexer' ) ?></option>
-					<option value="hide"<?php selected( $instance['recentglobalpostsfeedrssimage'], 'hide' ) ?>><?php _e( 'Verbergen', 'postindexer' ) ?></option>
-				</select>
-			</p>
-
-			<p>
-				<label for="<?php echo $this->get_field_id( 'recentglobalpostsfeedpoststype' ) ?>"><?php _e( 'Beitragstyp', 'postindexer' ) ?>:</label>
-				<input class="widefat" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedpoststype' ) ?>" name="<?php echo $this->get_field_name( 'recentglobalpostsfeedpoststype' ) ?>" value="<?php echo esc_attr( stripslashes( $instance['recentglobalpostsfeedpoststype'] ) ) ?>" type="text">
-			</p>
-
-			<input type="hidden" name="<?php echo $this->get_field_name( 'recentglobalpostsfeedsubmit' ) ?>" id="<?php echo $this->get_field_id( 'recentglobalpostsfeedsubmit' ) ?>" value="1">
-		</div><?php
+		return $defaults;
 	}
-
 }
 
-add_action( 'widgets_init', 'widget_recent_global_posts_feed_register' );
-function widget_recent_global_posts_feed_register() {
-	if ( !RECENT_GLOBAL_POSTS_FEED_WIDGET_MAIN_BLOG_ONLY || get_current_blog_id() == 1 ) {
-		register_widget( 'widget_recent_global_posts_feed' );
+if ( ! function_exists( 'rgpfwidget_register_widget' ) ) {
+	/**
+	 * Register the posts feed widget.
+	 */
+	function rgpfwidget_register_widget() {
+		register_widget( Recent_Global_Posts_Feed_Widget::NAME );
+	}
+}
+
+if ( ! function_exists( 'widget_recent_global_posts_feed_register' ) ) {
+	/**
+	 * Backward-compatible wrapper for legacy bootstrap.
+	 */
+	function widget_recent_global_posts_feed_register() {
+		rgpfwidget_register_widget();
 	}
 }

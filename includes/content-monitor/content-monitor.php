@@ -2,7 +2,7 @@
 
 //force multisite
 if ( ! is_multisite() ) {
-	die( __( 'Content Monitor is only compatible with Multisite installs.', 'contentmon' ) );
+	die( 'postindexer' ) );
 }
 
 class Content_Monitor {
@@ -28,7 +28,7 @@ class Content_Monitor {
 	public function send_email( $post_permalink, $post_type ) {
 		global $current_site;
 
-		$subject_content = __( "SITE_NAME: Content Notification", 'contentmon' );
+		$subject_content = 'postindexer' );
 
 		$message_content = __( "Dear EMAIL,
 
@@ -209,7 +209,7 @@ PERMALINK", 'contentmon' );
 
 	public function plug_pages() {
 		// Menü nicht mehr im Admin anzeigen
-		//add_submenu_page( 'settings.php', __( 'Content Monitor', 'contentmon' ), __( 'Content Monitor', 'contentmon' ), 'manage_network_options', 'content-monitor', array( &$this, 'page_main_output' ) );
+		//add_submenu_page( 'settings.php', 'postindexer' ), 'postindexer' ), 'manage_network_options', 'content-monitor', array( &$this, 'page_main_output' ) );
 	}
 
 //------------------------------------------------------------------------//

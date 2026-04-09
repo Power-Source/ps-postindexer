@@ -423,14 +423,7 @@ class globalsitetags {
 
 // Integration als Erweiterung für den Beitragsindexer
 add_action('plugins_loaded', function() {
-	if ( !class_exists('Postindexer_Extensions_Admin') ) return;
-	global $postindexer_extensions_admin;
-	if ( !isset($postindexer_extensions_admin) ) {
-		if ( isset($GLOBALS['postindexeradmin']) && isset($GLOBALS['postindexeradmin']->extensions_admin) ) {
-			$postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-		}
-	}
-	if ( isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('global_site_tags') ) {
+	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'global_site_tags' ) ) {
 		if (class_exists('globalsitetags')) {
 			global $globalsitetags;
 			$globalsitetags = new globalsitetags();

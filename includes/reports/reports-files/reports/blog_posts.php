@@ -11,7 +11,7 @@ if( ! defined( 'REPORTS_PLUGIN_URL' ) )
 global $activity_reports;
 if (!isset($activity_reports) || !is_object($activity_reports)) return;
 
-$activity_reports->add_report( __( 'Blog Posts', 'reports' ), 'blog-posts', __( 'Displays posts activity for a blog', 'reports' ) );
+$activity_reports->add_report( 'postindexer' ), 'blog-posts', 'postindexer' ) );
 
 if (
     (isset($_GET['report']) && $_GET['report'] === 'blog-posts') ||
@@ -43,42 +43,42 @@ function report_blog_posts_ouput(){
 				<table class="form-table">
 					<?php if ( is_multisite() ) { ?>
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Blog', 'reports' ) ?></th>
+						<th scope="row"><?php 'postindexer' ) ?></th>
 						<td>
 							<select name="blog_ID" id="blog_ID" style="width: 95%">
-								<option value=""><?php _e( '-- Select Blog --', 'reports' ); ?></option>
+								<option value=""><?php 'postindexer' ); ?></option>
 								<?php foreach ( $indexed_blogs as $blog ) : 
 									$blog_details = get_blog_details( $blog->blog_id, false );
 									if ( $blog_details ) :
 								?>
 									<option value="<?php echo esc_attr( $blog->blog_id ); ?>">
 										<?php echo esc_html( $blog_details->blogname ); ?> 
-										(ID: <?php echo $blog->blog_id; ?>, <?php printf( __( '%d posts', 'reports' ), $blog->post_count ); ?>)
+										(ID: <?php echo $blog->blog_id; ?>, <?php printf( 'postindexer' ), $blog->post_count ); ?>)
 									</option>
 								<?php 
 									endif;
 								endforeach; ?>
 							</select>
 							<br />
-							<small><?php _e( 'Only blogs with indexed posts are shown', 'reports' ); ?></small>
+							<small><?php 'postindexer' ); ?></small>
 						</td>
 					</tr>
 					<?php } else { ?>
 						<input type="hidden" name="blog_ID" id="blog_ID" value="0" />
 					<?php } ?>
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Period', 'reports' ) ?></th>
+						<th scope="row"><?php 'postindexer' ) ?></th>
 						<td>
 							<select name="period" id="period">
-								<option value="15" ><?php _e( '15 Days', 'reports' ); ?></option>
-								<option value="30" ><?php _e( '30 Days', 'reports' ); ?></option>
-								<option value="45" ><?php _e( '45 Days', 'reports' ); ?></option>
+								<option value="15" ><?php 'postindexer' ); ?></option>
+								<option value="30" ><?php 'postindexer' ); ?></option>
+								<option value="45" ><?php 'postindexer' ); ?></option>
 							</select>
 						</td>
 					</tr>
 				</table>
 				<p class="submit">
-					<input type="submit" name="Submit" class="button-primary" value="<?php _e( 'View', 'reports' ) ?>" />
+					<input type="submit" name="Submit" class="button-primary" value="<?php 'postindexer' ) ?>" />
 				</p>
 			</form>
 			<?php
@@ -90,15 +90,15 @@ function report_blog_posts_ouput(){
 			$blog = is_multisite() ? get_blog_details( $blog_id, false ) : true;
 			if ( ! $blog ) {
 				?>
-                <p><?php _e( 'Blog not found.', 'reports' ); ?></p>
+                <p><?php 'postindexer' ); ?></p>
                 <?php
 			}
 			if ( $blog ) {
 				?>
                 <p>
                     <ul>
-                        <li><strong><?php _e( 'Blog', 'reports' ); ?></strong>: <?php echo $blog_id; ?> (<?php echo get_site_url( $blog_id ); ?>)</li>
-                        <li><strong><?php _e( 'Period', 'reports' ); ?></strong>: <?php printf( __( '%d Days', 'reports' ), $period ); ?></li>
+                        <li><strong><?php 'postindexer' ); ?></strong>: <?php echo $blog_id; ?> (<?php echo get_site_url( $blog_id ); ?>)</li>
+                        <li><strong><?php 'postindexer' ); ?></strong>: <?php printf( 'postindexer' ), $period ); ?></li>
                     </ul>
                 </p>
                 <?php
@@ -226,7 +226,7 @@ function report_blog_posts_ouput(){
 
 					$g->bg_colour = '#ffffff';
 					$g->set_inner_background('#ffffff');
-					$g->area_hollow( 1, 3, 4, '#3357A0', __( 'post(s)', 'reports' ), 10 );
+					$g->area_hollow( 1, 3, 4, '#3357A0', 'postindexer' ), 10 );
 
 					$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
 					//------------------------------//

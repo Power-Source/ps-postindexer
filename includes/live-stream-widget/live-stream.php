@@ -17,18 +17,15 @@ function live_stream_init_proc() {
 }
 
 function live_stream_widgets_init_proc() {
-    // Integration als Erweiterung für den Beitragsindexer
-    if (class_exists('Postindexer_Extensions_Admin')) {
-        global $postindexer_extensions_admin;
-        if (!isset($postindexer_extensions_admin) && isset($GLOBALS['postindexeradmin']->extensions_admin)) {
-            $postindexer_extensions_admin = $GLOBALS['postindexeradmin']->extensions_admin;
-        }
-        if (isset($postindexer_extensions_admin) && $postindexer_extensions_admin->is_extension_active_for_site('live_stream_widget')) {
-            register_widget( 'LiveStreamWidget' );
-        }
-    } else {
-        register_widget( 'LiveStreamWidget' ); // Fallback, falls zentrale Logik nicht geladen
-    }
+	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) ) {
+		if ( ps_postindexer_is_extension_enabled( 'live_stream_widget' ) ) {
+			register_widget( 'LiveStreamWidget' );
+		}
+		return;
+	}
+
+	// Fallback, falls zentrale Erweiterungslogik nicht geladen wurde.
+	register_widget( 'LiveStreamWidget' );
 }
 
 /**

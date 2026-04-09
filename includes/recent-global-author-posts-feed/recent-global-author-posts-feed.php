@@ -2,7 +2,7 @@
 
 // Postindexer-Erweiterung registrieren (immer ganz oben, außerhalb von Bedingungen)
 add_filter('postindexer_extensions', function($exts) {
-    $exts['recent-global-author-posts-feed'] = array(
+	$exts['recent_global_author_posts_feed'] = array(
         'title' => 'Globaler Autoren-Beitrags-Feed',
         'description' => __('Stellt einen globalen RSS-Feed für Beiträge eines Autors im Netzwerk bereit.', 'postindexer'),
         'file' => __FILE__,
@@ -16,19 +16,25 @@ add_filter('postindexer_extensions', function($exts) {
 
 // Feed-Logik nur laden, wenn Erweiterung aktiv ist
 function rgap_feed_extension_active() {
-    $settings = get_site_option('postindexer_extensions_settings', []);
-    $site_id = function_exists('get_current_blog_id') ? get_current_blog_id() : 1;
-    $main_site = function_exists('get_main_site_id') ? get_main_site_id() : 1;
-    $ext = $settings['recent-global-author-posts-feed'] ?? null;
-    $active = isset($ext['active']) ? (int)$ext['active'] : 0;
-    $scope = $ext['scope'] ?? 'main';
-    $sites = $ext['sites'] ?? [];
-    if ($active) {
-        if ($scope === 'network') return true;
-        if ($scope === 'main' && $site_id == $main_site) return true;
-        if ($scope === 'sites' && in_array($site_id, $sites)) return true;
-    }
-    return false;
+	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) ) {
+		return ps_postindexer_is_extension_enabled( 'recent_global_author_posts_feed' );
+	}
+
+	$settings = get_site_option( 'postindexer_extensions_settings', array() );
+	$site_id = function_exists( 'get_current_blog_id' ) ? get_current_blog_id() : 1;
+	$main_site = function_exists( 'get_main_site_id' ) ? get_main_site_id() : 1;
+	$ext = isset( $settings['recent_global_author_posts_feed'] ) ? $settings['recent_global_author_posts_feed'] : null;
+	$active = isset( $ext['active'] ) ? (int) $ext['active'] : 0;
+	$scope = isset( $ext['scope'] ) ? $ext['scope'] : 'main';
+	$sites = isset( $ext['sites'] ) && is_array( $ext['sites'] ) ? $ext['sites'] : array();
+
+	if ( $active ) {
+		if ( 'network' === $scope ) return true;
+		if ( 'main' === $scope && $site_id == $main_site ) return true;
+		if ( 'sites' === $scope && in_array( $site_id, $sites, true ) ) return true;
+	}
+
+	return false;
 }
 
 if (rgap_feed_extension_active()) {

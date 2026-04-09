@@ -11,7 +11,7 @@ if( ! defined( 'REPORTS_PLUGIN_URL' ) )
 global $activity_reports;
 if (!isset($activity_reports) || !is_object($activity_reports)) return;
 
-$activity_reports->add_report( __( 'User Posts', 'reports' ), 'user-posts', __( 'Displays post activity for a user', 'reports' ) );
+$activity_reports->add_report( 'postindexer' ), 'user-posts', 'postindexer' ) );
 
 if (
     (isset($_GET['report']) && $_GET['report'] === 'user-posts') ||
@@ -31,27 +31,27 @@ function report_user_posts_ouput(){
 			<form name="report" method="POST" action="?page=reports&action=view-report&report=user-posts&report-action=view">
 				<table class="form-table">
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Username', 'reports' ) ?></th>
+						<th scope="row"><?php 'postindexer' ) ?></th>
 						<td>
 							<input type="text" name="user_login" id="user_login" list="user_login_list" style="width: 95%" tabindex='1' maxlength="200" value="" />
 							<datalist id="user_login_list"></datalist>
 							<br />
-							<?php _e( 'Case Sensitive', 'reports' ) ?>
+							<?php 'postindexer' ) ?>
 						</td>
 					</tr>
 					<tr valign="top">
-						<th scope="row"><?php _e( 'Period', 'reports' ) ?></th>
+						<th scope="row"><?php 'postindexer' ) ?></th>
 						<td>
 							<select name="period" id="period">
-								<option value="15" ><?php _e( '15 Days', 'reports' ); ?></option>
-								<option value="30" ><?php _e( '30 Days', 'reports' ); ?></option>
-								<option value="45" ><?php _e( '45 Days', 'reports' ); ?></option>
+								<option value="15" ><?php 'postindexer' ); ?></option>
+								<option value="30" ><?php 'postindexer' ); ?></option>
+								<option value="45" ><?php 'postindexer' ); ?></option>
 							</select>
 						</td>
 					</tr>
 				</table>
 				<p class="submit">
-					<input type="submit" name="Submit" class="button-primary" value="<?php _e( 'View', 'reports' ) ?>" />
+					<input type="submit" name="Submit" class="button-primary" value="<?php 'postindexer' ) ?>" />
 				</p>
 			</form>
 			<script>
@@ -103,15 +103,15 @@ function report_user_posts_ouput(){
 			$user = get_user_by( 'login', $user_login );
 			if ( ! $user ) {
 				?>
-                <p><?php _e( 'User not found.', 'reports' ); ?></p>
+                <p><?php 'postindexer' ); ?></p>
                 <?php
 			} else {
 				$user_ID = $user->ID;
 				?>
                 <p>
                     <ul>
-                        <li><strong><?php _e( 'Username', 'reports' ); ?></strong>: <?php echo $user_login; ?></li>
-                        <li><strong><?php _e( 'Period', 'reports' ); ?></strong>: <?php printf( __( '%d Days', 'reports' ), $period ); ?></li>
+                        <li><strong><?php 'postindexer' ); ?></strong>: <?php echo $user_login; ?></li>
+                        <li><strong><?php 'postindexer' ); ?></strong>: <?php printf( 'postindexer' ), $period ); ?></li>
                     </ul>
                 </p>
                 <?php
@@ -225,7 +225,7 @@ function report_user_posts_ouput(){
 
 					$g->bg_colour = '#ffffff';
 					$g->set_inner_background('#ffffff');
-					$g->area_hollow( 1, 3, 4, '#3357A0', __( 'post(s)', 'reports' ), 10 );
+					$g->area_hollow( 1, 3, 4, '#3357A0', 'postindexer' ), 10 );
 
 					$g->set_tool_tip( '#x_label# <br>#val# #key# ' );
 					//------------------------------//
