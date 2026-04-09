@@ -46,6 +46,18 @@ Der PS Multisite Indexer vereint jetzt alle wichtigen Funktionen in einem einzig
 
 == ChangeLog ==
 
+= 1.0.4 =
+
+* Alle Legacy-Widgets auf moderne WP_Widget-Klassen migriert (Recent Global Comments, Comments Feed, Posts Feed)
+* Einheitlicher Aktivierungs-Gate: alle Module nutzen jetzt `ps_postindexer_is_extension_enabled()`
+* Extension-Keys vereinheitlicht (Bindestriche → Unterstriche), Fehler beim Author-Posts-Feed behoben
+* Anonyme `plugins_loaded`-Closures in benannte Bootstrap-Funktionen umgewandelt (Global Site Search, Global Site Tags)
+* `class_alias` für rückwärtskompatiblen Zugriff auf `Global_Site_Search` ergänzt
+* Doppelte Widget-Selbstregistrierung in `widget-global-site-tags.php` entfernt
+* Doppelten `require_once` für `comment-form-text.php` in Bootstrap entfernt
+* `comment-form-text.php`: doppelten Action-Hook entfernt, Aktivierungsprüfung auf shared Helper umgestellt
+* Legacy `global-posts-feed.php` entfernt (Funktionalität in `recent-global-posts-feed.php`)
+
 = 1.0.3 =
 
 * Globale Suche mehr Suchmaschine UIX
