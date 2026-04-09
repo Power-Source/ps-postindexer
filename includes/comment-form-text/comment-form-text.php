@@ -28,21 +28,9 @@ if (is_network_admin()) {
 }
 
 function comment_form_text_output(){
-    // Fallback: Aktivierungsprüfung direkt über die gespeicherten Optionen
-    $settings = get_site_option('postindexer_extensions_settings', []);
-    $site_id = function_exists('get_current_blog_id') ? get_current_blog_id() : 1;
-    $main_site = function_exists('get_main_site_id') ? get_main_site_id() : 1;
-    $ext = $settings['comment_form_text'] ?? null;
-    $active = isset($ext['active']) ? (int)$ext['active'] : 0;
-    $scope = $ext['scope'] ?? 'main';
-    $sites = $ext['sites'] ?? [];
-    $show = false;
-    if ($active) {
-        if ($scope === 'network') $show = true;
-        elseif ($scope === 'main' && $site_id == $main_site) $show = true;
-        elseif ($scope === 'sites' && in_array($site_id, $sites)) $show = true;
+    if ( !function_exists( 'ps_postindexer_is_extension_enabled' ) || !ps_postindexer_is_extension_enabled( 'comment_form_text' ) ) {
+        return;
     }
-    if (!$show) return;
     $css = get_site_option('cft_css', '');
     if ($css) {
         echo '<style type="text/css">'.esc_html($css).'</style>';
@@ -53,7 +41,6 @@ function comment_form_text_output(){
         echo wp_kses_post(get_site_option('cft_text_guest', ''));
     }
 }
-add_action('comment_form_after_fields', 'comment_form_text_output');
 
 // Unterstützte Hooks für die Positionierung
 $cft_hooks = [
