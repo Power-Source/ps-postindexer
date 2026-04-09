@@ -241,20 +241,36 @@ class global_site_search {
 
 }
 
-// Integration als Erweiterung für den Beitragsindexer
-add_action('plugins_loaded', function() {
-	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'global_site_search' ) ) {
-		// Hier die eigentliche Initialisierung der Such-Erweiterung
-		if (class_exists('Global_Site_Search')) {
-			new Global_Site_Search();
+// Rueckwaertskompatibler Alias fuer den neuen Klassennamen.
+if ( !class_exists( 'Global_Site_Search', false ) ) {
+	class_alias( 'global_site_search', 'Global_Site_Search' );
+}
+
+if ( !function_exists( 'global_site_search_bootstrap' ) ) {
+	/**
+	 * Initialisiert die Globale Netzwerksuche genau einmal.
+	 */
+	function global_site_search_bootstrap() {
+		if ( !function_exists( 'ps_postindexer_is_extension_enabled' ) || !ps_postindexer_is_extension_enabled( 'global_site_search' ) ) {
+			return;
 		}
+
+		global $global_site_search;
+		if ( isset( $global_site_search ) && $global_site_search instanceof global_site_search ) {
+			return;
+		}
+
+		$global_site_search = new Global_Site_Search();
 	}
-});
+}
+
+// Integration als Erweiterung fuer den Beitragsindexer.
+add_action( 'plugins_loaded', 'global_site_search_bootstrap' );
 
 // Automatische Seitenerstellung beim Aktivieren der Erweiterung
 register_activation_hook( __FILE__, function() {
-    if (class_exists('global_site_search')) {
-        global_site_search::static_page_setup();
+	if (class_exists('Global_Site_Search')) {
+		Global_Site_Search::static_page_setup();
     }
 });
 

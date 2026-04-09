@@ -422,21 +422,28 @@ class globalsitetags {
 }
 
 // Integration als Erweiterung für den Beitragsindexer
-add_action('plugins_loaded', function() {
-	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'global_site_tags' ) ) {
-		if (class_exists('globalsitetags')) {
-			global $globalsitetags;
-			$globalsitetags = new globalsitetags();
-			// Widget-Registrierung in widgets_init verschieben!
-			add_action('widgets_init', function() {
-				require_once __DIR__ . '/widget-global-site-tags.php';
-				if (!is_network_admin()) {
-					register_widget('widget_global_site_tags');
-				}
-			});
+if ( !function_exists( 'global_site_tags_bootstrap' ) ) {
+	function global_site_tags_bootstrap() {
+		if ( !function_exists( 'ps_postindexer_is_extension_enabled' ) || !ps_postindexer_is_extension_enabled( 'global_site_tags' ) ) {
+			return;
 		}
+		if ( !class_exists( 'globalsitetags' ) ) {
+			return;
+		}
+		global $globalsitetags;
+		if ( isset( $globalsitetags ) && $globalsitetags instanceof globalsitetags ) {
+			return;
+		}
+		$globalsitetags = new globalsitetags();
+		add_action( 'widgets_init', function() {
+			require_once __DIR__ . '/widget-global-site-tags.php';
+			if ( !is_network_admin() ) {
+				register_widget( 'widget_global_site_tags' );
+			}
+		} );
 	}
-});
+}
+add_action( 'plugins_loaded', 'global_site_tags_bootstrap' );
 
 // Settings-Renderer für Netzwerk-Admin (immer deklarieren)
 if (!class_exists('Global_Site_Tags_Settings_Renderer')) {
