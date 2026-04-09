@@ -5,11 +5,25 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // Integration als Erweiterung für den Beitragsindexer
 add_action('plugins_loaded', function() {
 	if ( function_exists( 'ps_postindexer_is_extension_enabled' ) && ps_postindexer_is_extension_enabled( 'recent_network_posts' ) ) {
-		new Recent_Network_Posts();
+		Recent_Network_Posts::instance();
+		add_action( 'widgets_init', function() {
+			if ( class_exists( 'WP_Widget' ) ) {
+				register_widget( 'Recent_Network_Posts_Widget' );
+			}
+		}, 30 );
 	}
 });
 
 class Recent_Network_Posts {
+	private static $instance = null;
+
+	public static function instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+
+		return self::$instance;
+	}
 
 	public function __construct() {
 		add_shortcode( 'recent_network_posts', [ $this, 'render_shortcode' ] );
@@ -349,6 +363,59 @@ class Recent_Network_Posts {
             update_site_option('network_posts_defaults', $_POST['network_posts_defaults']);
         }
     }
+}
+
+class Recent_Network_Posts_Widget extends WP_Widget {
+	public function __construct() {
+		parent::__construct(
+			'recent_network_posts_widget',
+			__( 'Aktuelle Netzwerkbeitraege', 'postindexer' ),
+			array(
+				'classname'   => 'recent_network_posts_widget',
+				'description' => __( 'Zeigt aktuelle Beitraege aus dem Netzwerk an.', 'postindexer' ),
+			)
+		);
+	}
+
+	public function widget( $args, $instance ) {
+		$title = isset( $instance['title'] ) ? $instance['title'] : __( 'Aktuelle Netzwerkbeitraege', 'postindexer' );
+		$title = apply_filters( 'widget_title', $title, $instance, $this->id_base );
+
+		$shortcode_args = array(
+			'number' => isset( $instance['number'] ) ? absint( $instance['number'] ) : 5,
+		);
+
+		echo $args['before_widget'];
+		if ( ! empty( $title ) ) {
+			echo $args['before_title'] . esc_html( $title ) . $args['after_title'];
+		}
+
+		echo Recent_Network_Posts::instance()->render_shortcode( $shortcode_args );
+		echo $args['after_widget'];
+	}
+
+	public function form( $instance ) {
+		$title  = isset( $instance['title'] ) ? $instance['title'] : __( 'Aktuelle Netzwerkbeitraege', 'postindexer' );
+		$number = isset( $instance['number'] ) ? absint( $instance['number'] ) : 5;
+		?>
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>"><?php esc_html_e( 'Titel', 'postindexer' ); ?>:</label>
+			<input class="widefat" id="<?php echo esc_attr( $this->get_field_id( 'title' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'title' ) ); ?>" type="text" value="<?php echo esc_attr( $title ); ?>" />
+		</p>
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'number' ) ); ?>"><?php esc_html_e( 'Anzahl Beitraege', 'postindexer' ); ?>:</label>
+			<input class="tiny-text" id="<?php echo esc_attr( $this->get_field_id( 'number' ) ); ?>" name="<?php echo esc_attr( $this->get_field_name( 'number' ) ); ?>" type="number" step="1" min="1" max="20" value="<?php echo esc_attr( $number ); ?>" />
+		</p>
+		<?php
+	}
+
+	public function update( $new_instance, $old_instance ) {
+		$instance = array();
+		$instance['title']  = sanitize_text_field( $new_instance['title'] ?? '' );
+		$instance['number'] = max( 1, min( 20, absint( $new_instance['number'] ?? 5 ) ) );
+
+		return $instance;
+	}
 }
 //delete_option( 'network_posts_defaults' ); // ENTFERNT! Instanziierung nur noch über plugins_loaded bei aktiver Erweiterung
 
